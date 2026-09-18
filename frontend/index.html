@@ -92,6 +92,13 @@
           <span>/hr</span>
         </div>
       </div>
+      <div class="goal-item">
+        <label for="goal-min-instances">Min Instances:</label>
+        <div class="goal-input-wrap">
+          <input type="number" id="goal-min-instances" value="1" min="1" max="10" onchange="saveGoals()">
+          <span>nodes</span>
+        </div>
+      </div>
       <div class="goal-item toggle-item">
         <label>Live Monitoring:</label>
         <button class="toggle-btn active" id="btn-monitoring-toggle" onclick="toggleMonitoring()">

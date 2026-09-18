@@ -47,6 +47,10 @@ async function fetchGoals() {
     document.getElementById('goal-reduction').value = goals.target_cost_reduction_percent;
     document.getElementById('goal-latency').value = goals.max_acceptable_latency_ms;
     document.getElementById('goal-budget').value = goals.max_hourly_budget;
+    const minEl = document.getElementById('goal-min-instances');
+    if (minEl && goals.default_min_instances !== undefined) {
+      minEl.value = goals.default_min_instances;
+    }
     monitoringActive = goals.monitoring_enabled;
     updateMonitoringButton();
   } catch (err) {
@@ -59,6 +63,7 @@ async function saveGoals() {
     target_cost_reduction_percent: parseFloat(document.getElementById('goal-reduction').value) || 25.0,
     max_acceptable_latency_ms: parseFloat(document.getElementById('goal-latency').value) || 300.0,
     max_hourly_budget: parseFloat(document.getElementById('goal-budget').value) || 50.0,
+    default_min_instances: parseInt(document.getElementById('goal-min-instances')?.value || '1', 10),
     monitoring_enabled: monitoringActive
   };
   try {
@@ -279,8 +284,16 @@ function renderServicesList(services) {
             <span class="metric-val">${svc.cpu_percent}%</span>
           </div>
           <div class="metric-item">
+            <span class="metric-label">Memory</span>
+            <span class="metric-val">${svc.memory_percent}%</span>
+          </div>
+          <div class="metric-item">
             <span class="metric-label">Traffic Rate</span>
             <span class="metric-val">${svc.requests_per_minute} RPM</span>
+          </div>
+          <div class="metric-item">
+            <span class="metric-label">Error Rate</span>
+            <span class="metric-val" style="color:${(svc.error_rate_percent || 0.1) > 1.0 ? 'var(--danger)' : 'var(--text-main)'}">${svc.error_rate_percent !== undefined ? svc.error_rate_percent : 0.1}%</span>
           </div>
         </div>
 

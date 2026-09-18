@@ -42,6 +42,8 @@ def init_db():
             max_instances INTEGER NOT NULL,
             max_latency_ms REAL NOT NULL,
             healthy BOOLEAN NOT NULL DEFAULT 1,
+            error_rate_percent REAL NOT NULL DEFAULT 0.1,
+            resource_size TEXT NOT NULL DEFAULT 'Standard',
             timestamp TEXT NOT NULL
         )
     """)
@@ -82,12 +84,29 @@ def init_db():
             target_cost_reduction_percent REAL NOT NULL DEFAULT 25.0,
             max_acceptable_latency_ms REAL NOT NULL DEFAULT 300.0,
             max_hourly_budget REAL NOT NULL DEFAULT 50.0,
+            default_min_instances INTEGER NOT NULL DEFAULT 1,
             monitoring_enabled BOOLEAN NOT NULL DEFAULT 1
         )
     """)
+
+    # Safe column migrations if existing tables were created in earlier schema
+    for col, typ, dflt in [
+        ("error_rate_percent", "REAL", "0.1"),
+        ("resource_size", "TEXT", "'Standard'")
+    ]:
+        try:
+            cursor.execute(f"ALTER TABLE services ADD COLUMN {col} {typ} NOT NULL DEFAULT {dflt}")
+        except Exception:
+            pass
+
+    try:
+        cursor.execute("ALTER TABLE user_goals ADD COLUMN default_min_instances INTEGER NOT NULL DEFAULT 1")
+    except Exception:
+        pass
+
     cursor.execute("""
-        INSERT OR IGNORE INTO user_goals (id, target_cost_reduction_percent, max_acceptable_latency_ms, max_hourly_budget, monitoring_enabled)
-        VALUES (1, 25.0, 300.0, 50.0, 1)
+        INSERT OR IGNORE INTO user_goals (id, target_cost_reduction_percent, max_acceptable_latency_ms, max_hourly_budget, default_min_instances, monitoring_enabled)
+        VALUES (1, 25.0, 300.0, 50.0, 1, 1)
     """)
 
     conn.commit()
@@ -117,8 +136,8 @@ def load_scenario(scenario_id: str = "test_a") -> Dict[str, Any]:
             INSERT INTO services (
                 service_id, cpu_percent, memory_percent, requests_per_minute,
                 previous_requests_per_minute, latency_ms, instances, cost_per_hour,
-                min_instances, max_instances, max_latency_ms, healthy, timestamp
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                min_instances, max_instances, max_latency_ms, healthy, error_rate_percent, resource_size, timestamp
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             s["service_id"],
             s["cpu_percent"],
@@ -132,6 +151,8 @@ def load_scenario(scenario_id: str = "test_a") -> Dict[str, Any]:
             s["max_instances"],
             s["max_latency_ms"],
             1 if s.get("healthy", True) else 0,
+            s.get("error_rate_percent", 0.1),
+            s.get("resource_size", "Standard"),
             s["timestamp"]
         ))
 
@@ -169,7 +190,15 @@ def get_service_by_id(service_id: str) -> Optional[Dict[str, Any]]:
     return dict(row) if row else None
 
 
-def update_service_instances(service_id: str, new_instances: int, new_latency: float, new_cpu: float, new_cost: float):
+def update_service_instances(
+    service_id: str, 
+    new_instances: int, 
+    new_latency: float, 
+    new_cpu: float, 
+    new_cost: float,
+    new_error_rate: float = 0.1,
+    new_resource_size: str = "Standard"
+):
     """Update service state in database after cloud action."""
     init_db()
     conn = get_db_connection()
@@ -177,9 +206,10 @@ def update_service_instances(service_id: str, new_instances: int, new_latency: f
     now_str = datetime.now(timezone.utc).isoformat()
     cursor.execute("""
         UPDATE services
-        SET instances = ?, latency_ms = ?, cpu_percent = ?, cost_per_hour = ?, timestamp = ?
+        SET instances = ?, latency_ms = ?, cpu_percent = ?, cost_per_hour = ?, 
+            error_rate_percent = ?, resource_size = ?, timestamp = ?
         WHERE service_id = ?
-    """, (new_instances, new_latency, new_cpu, new_cost, now_str, service_id))
+    """, (new_instances, new_latency, new_cpu, new_cost, new_error_rate, new_resource_size, now_str, service_id))
     conn.commit()
     conn.close()
 
@@ -262,11 +292,14 @@ def get_user_goals() -> Dict[str, Any]:
     if row:
         d = dict(row)
         d["monitoring_enabled"] = bool(d["monitoring_enabled"])
+        if "default_min_instances" not in d or d["default_min_instances"] is None:
+            d["default_min_instances"] = 1
         return d
     return {
         "target_cost_reduction_percent": 25.0,
         "max_acceptable_latency_ms": 300.0,
         "max_hourly_budget": 50.0,
+        "default_min_instances": 1,
         "monitoring_enabled": True
     }
 
@@ -281,12 +314,14 @@ def update_user_goals(goals: Dict[str, Any]) -> Dict[str, Any]:
         SET target_cost_reduction_percent = ?,
             max_acceptable_latency_ms = ?,
             max_hourly_budget = ?,
+            default_min_instances = ?,
             monitoring_enabled = ?
         WHERE id = 1
     """, (
         goals.get("target_cost_reduction_percent", 25.0),
         goals.get("max_acceptable_latency_ms", 300.0),
         goals.get("max_hourly_budget", 50.0),
+        goals.get("default_min_instances", 1),
         1 if goals.get("monitoring_enabled", True) else 0
     ))
     conn.commit()

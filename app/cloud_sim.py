@@ -36,6 +36,8 @@ def get_service_state(service_id: str) -> Optional[ServiceState]:
         max_instances=raw["max_instances"],
         max_latency_ms=raw["max_latency_ms"],
         healthy=bool(raw["healthy"]),
+        error_rate_percent=float(raw["error_rate_percent"]) if "error_rate_percent" in raw.keys() else 0.1,
+        resource_size=str(raw["resource_size"]) if "resource_size" in raw.keys() else "Standard",
         timestamp=raw["timestamp"]
     )
 
@@ -128,6 +130,9 @@ def execute_cloud_action(service_id: str, action_type: str, target_instances: in
     cost_per_unit = raw["cost_per_hour"] / max(1, old_instances)
 
     # Compute realistic post-change metrics
+    old_err = raw.get("error_rate_percent", 0.1)
+    old_size = raw.get("resource_size", "Standard")
+
     if action_type in ["scale_down", "scale_up"]:
         new_instances = target_instances
         ratio = old_instances / max(1, new_instances)
@@ -140,25 +145,48 @@ def execute_cloud_action(service_id: str, action_type: str, target_instances: in
             # Latency increases slightly when scaled down
             latency_increase = (ratio - 1.0) * 15.0
             new_latency = round(old_latency + latency_increase, 1)
+            new_error_rate = min(5.0, round(old_err * (1.0 + (ratio - 1.0) * 0.4), 2))
         else:
             # Latency improves when scaled up
             latency_decrease = (1.0 - (1.0 / ratio)) * 30.0
             new_latency = max(15.0, round(old_latency - latency_decrease, 1))
+            new_error_rate = max(0.01, round(old_err * 0.8, 2))
             
         new_cost = round(cost_per_unit * new_instances, 2)
+        new_resource_size = old_size
+    elif action_type == "resize":
+        new_instances = target_instances
+        ratio = old_instances / max(1, new_instances)
+        new_cpu = min(95.0, round(old_cpu * ratio, 1))
+        new_latency = round(old_latency * (1.05 if target_instances < old_instances else 0.92), 1)
+        new_cost = round(cost_per_unit * new_instances * 0.85, 2)
+        new_error_rate = old_err
+        new_resource_size = "Optimized-Tier" if target_instances <= old_instances else "Performance-Tier"
     elif action_type == "stop_idle_service":
         new_instances = 0
         new_cpu = 0.0
         new_latency = 0.0
         new_cost = 0.0
+        new_error_rate = 0.0
+        new_resource_size = old_size
     else:
         new_instances = old_instances
         new_cpu = old_cpu
         new_latency = old_latency
         new_cost = raw["cost_per_hour"]
+        new_error_rate = old_err
+        new_resource_size = old_size
 
     # Persist the change to database
-    update_service_instances(service_id, new_instances, new_latency, new_cpu, new_cost)
+    update_service_instances(
+        service_id, 
+        new_instances, 
+        new_latency, 
+        new_cpu, 
+        new_cost,
+        new_error_rate=new_error_rate,
+        new_resource_size=new_resource_size
+    )
     
     action_id = f"act-{int(datetime.now().timestamp())}"
     record_audit("ACTION_APPLIED", {
@@ -168,7 +196,9 @@ def execute_cloud_action(service_id: str, action_type: str, target_instances: in
         "from_instances": old_instances,
         "to_instances": new_instances,
         "cost_before": raw["cost_per_hour"],
-        "cost_after": new_cost
+        "cost_after": new_cost,
+        "error_rate_before": old_err,
+        "error_rate_after": new_error_rate
     }, service_id)
 
     return ActionResult(
@@ -203,13 +233,16 @@ def simulate_telemetry_tick() -> List[Dict[str, Any]]:
         jitter_cpu = round(max(5.0, min(95.0, s["cpu_percent"] + random.uniform(-1.5, 1.5))), 1)
         jitter_rpm = max(0, int(s["requests_per_minute"] + random.randint(-30, 30)))
         jitter_lat = round(max(10.0, min(s["max_latency_ms"] * 1.2, s["latency_ms"] + random.uniform(-3.0, 3.0))), 1)
+        jitter_err = max(0.0, min(5.0, round(s.get("error_rate_percent", 0.1) + random.uniform(-0.02, 0.02), 2)))
         
         update_service_instances(
             service_id=sid,
             new_instances=s["instances"],
             new_latency=jitter_lat,
             new_cpu=jitter_cpu,
-            new_cost=s["cost_per_hour"]
+            new_cost=s["cost_per_hour"],
+            new_error_rate=jitter_err,
+            new_resource_size=s.get("resource_size", "Standard")
         )
         updated.append(get_service_by_id(sid))
         
