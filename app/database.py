@@ -75,6 +75,21 @@ def init_db():
         )
     """)
 
+    # 4. User Goals table: Step 1 of P3
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS user_goals (
+            id INTEGER PRIMARY KEY CHECK (id = 1),
+            target_cost_reduction_percent REAL NOT NULL DEFAULT 25.0,
+            max_acceptable_latency_ms REAL NOT NULL DEFAULT 300.0,
+            max_hourly_budget REAL NOT NULL DEFAULT 50.0,
+            monitoring_enabled BOOLEAN NOT NULL DEFAULT 1
+        )
+    """)
+    cursor.execute("""
+        INSERT OR IGNORE INTO user_goals (id, target_cost_reduction_percent, max_acceptable_latency_ms, max_hourly_budget, monitoring_enabled)
+        VALUES (1, 25.0, 300.0, 50.0, 1)
+    """)
+
     conn.commit()
     conn.close()
 
@@ -234,3 +249,47 @@ def get_optimization_history(service_id: Optional[str] = None, limit: int = 10) 
     rows = cursor.fetchall()
     conn.close()
     return [dict(row) for row in rows]
+
+
+def get_user_goals() -> Dict[str, Any]:
+    """Retrieve the developer's goals and boundaries."""
+    init_db()
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM user_goals WHERE id = 1")
+    row = cursor.fetchone()
+    conn.close()
+    if row:
+        d = dict(row)
+        d["monitoring_enabled"] = bool(d["monitoring_enabled"])
+        return d
+    return {
+        "target_cost_reduction_percent": 25.0,
+        "max_acceptable_latency_ms": 300.0,
+        "max_hourly_budget": 50.0,
+        "monitoring_enabled": True
+    }
+
+
+def update_user_goals(goals: Dict[str, Any]) -> Dict[str, Any]:
+    """Update the developer's goals and boundaries."""
+    init_db()
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        UPDATE user_goals
+        SET target_cost_reduction_percent = ?,
+            max_acceptable_latency_ms = ?,
+            max_hourly_budget = ?,
+            monitoring_enabled = ?
+        WHERE id = 1
+    """, (
+        goals.get("target_cost_reduction_percent", 25.0),
+        goals.get("max_acceptable_latency_ms", 300.0),
+        goals.get("max_hourly_budget", 50.0),
+        1 if goals.get("monitoring_enabled", True) else 0
+    ))
+    conn.commit()
+    conn.close()
+    return get_user_goals()
+

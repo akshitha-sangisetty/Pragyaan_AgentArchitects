@@ -15,11 +15,17 @@ let lastSelectedManualServiceId = null;
 
 // Debounce helper for slider
 let sliderTimeout = null;
+let telemetryChart = null;
+let monitoringActive = true;
+let monitoringTimer = null;
 
 document.addEventListener('DOMContentLoaded', () => {
+  initTelemetryChart();
+  fetchGoals();
   loadScenario('test_a');
   fetchHistory();
   setInterval(updateClock, 1000);
+  startMonitoringLoop();
 });
 
 function updateClock() {
@@ -28,6 +34,152 @@ function updateClock() {
     const now = new Date();
     clockEl.textContent = now.toISOString().substring(11, 19) + ' UTC';
   }
+}
+
+// ==========================================================================
+// Step 1: Goals & Operational Boundaries
+// ==========================================================================
+
+async function fetchGoals() {
+  try {
+    const res = await fetch('/api/goals');
+    const goals = await res.json();
+    document.getElementById('goal-reduction').value = goals.target_cost_reduction_percent;
+    document.getElementById('goal-latency').value = goals.max_acceptable_latency_ms;
+    document.getElementById('goal-budget').value = goals.max_hourly_budget;
+    monitoringActive = goals.monitoring_enabled;
+    updateMonitoringButton();
+  } catch (err) {
+    console.error('Failed to fetch goals:', err);
+  }
+}
+
+async function saveGoals() {
+  const goals = {
+    target_cost_reduction_percent: parseFloat(document.getElementById('goal-reduction').value) || 25.0,
+    max_acceptable_latency_ms: parseFloat(document.getElementById('goal-latency').value) || 300.0,
+    max_hourly_budget: parseFloat(document.getElementById('goal-budget').value) || 50.0,
+    monitoring_enabled: monitoringActive
+  };
+  try {
+    await fetch('/api/goals', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(goals)
+    });
+  } catch (err) {
+    console.error('Failed to save goals:', err);
+  }
+}
+
+function toggleMonitoring() {
+  monitoringActive = !monitoringActive;
+  updateMonitoringButton();
+  saveGoals();
+  if (monitoringActive) {
+    startMonitoringLoop();
+  } else {
+    clearInterval(monitoringTimer);
+    monitoringTimer = null;
+  }
+}
+
+function updateMonitoringButton() {
+  const btn = document.getElementById('btn-monitoring-toggle');
+  if (!btn) return;
+  if (monitoringActive) {
+    btn.className = 'toggle-btn active';
+    btn.innerHTML = '<span class="toggle-dot"></span> ON';
+  } else {
+    btn.className = 'toggle-btn off';
+    btn.innerHTML = '<span class="toggle-dot"></span> OFF';
+  }
+}
+
+function startMonitoringLoop() {
+  if (monitoringTimer) clearInterval(monitoringTimer);
+  monitoringTimer = setInterval(async () => {
+    if (!monitoringActive) return;
+    try {
+      const res = await fetch('/api/telemetry/tick', { method: 'POST' });
+      const updated = await res.json();
+      currentServices = updated;
+      renderServicesList(updated);
+      updateTelemetryChart(updated);
+    } catch (e) {
+      // ignore transient tick errors
+    }
+  }, 4000);
+}
+
+// ==========================================================================
+// Chart.js Telemetry Graph
+// ==========================================================================
+
+function initTelemetryChart() {
+  const ctx = document.getElementById('telemetryChart');
+  if (!ctx || typeof Chart === 'undefined') return;
+
+  telemetryChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: [],
+      datasets: [
+        {
+          label: 'Current Latency (ms)',
+          data: [],
+          backgroundColor: 'rgba(6, 182, 212, 0.65)',
+          borderColor: '#06b6d4',
+          borderWidth: 1,
+          borderRadius: 4
+        },
+        {
+          label: 'Max Latency SLA Boundary',
+          data: [],
+          type: 'line',
+          borderColor: '#f43f5e',
+          borderDash: [5, 5],
+          borderWidth: 2,
+          pointRadius: 0,
+          fill: false
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: {
+          beginAtZero: true,
+          grid: { color: 'rgba(255, 255, 255, 0.05)' },
+          ticks: { color: '#64748b', font: { family: 'JetBrains Mono', size: 10 } }
+        },
+        x: {
+          grid: { display: false },
+          ticks: { color: '#94a3b8', font: { family: 'Plus Jakarta Sans', size: 10 } }
+        }
+      },
+      plugins: {
+        legend: {
+          display: true,
+          position: 'top',
+          labels: { color: '#94a3b8', font: { size: 10 }, boxWidth: 12 }
+        }
+      }
+    }
+  });
+}
+
+function updateTelemetryChart(services) {
+  if (!telemetryChart) return;
+  const labels = services.map(s => s.service_id);
+  const latencies = services.map(s => s.latency_ms);
+  const slas = services.map(s => s.max_latency_ms);
+
+  telemetryChart.data.labels = labels;
+  telemetryChart.data.datasets[0].data = latencies;
+  telemetryChart.data.datasets[1].data = slas;
+  telemetryChart.update('none'); // Update without full redraw animation
 }
 
 // ==========================================================================
@@ -79,6 +231,7 @@ async function fetchServices() {
     currentServices = await res.json();
     renderServicesList(currentServices);
     populateManualDropdown(currentServices);
+    updateTelemetryChart(currentServices);
   } catch (err) {
     console.error('Failed to fetch services:', err);
   }
@@ -531,3 +684,45 @@ function resetDiffView() {
     activeCard.classList.add('hidden');
   }
 }
+
+// ==========================================================================
+// Phase 5: Export Compliance Audit Report
+// ==========================================================================
+
+async function exportAuditReport(format) {
+  try {
+    const res = await fetch('/api/history');
+    const data = await res.json();
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    
+    if (format === 'json') {
+      const jsonStr = JSON.stringify(data, null, 2);
+      const blob = new Blob([jsonStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `cloud_guardian_audit_report_${timestamp}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } else if (format === 'csv') {
+      const records = data.optimization_history || [];
+      if (records.length === 0) {
+        alert('No optimization history to export yet.');
+        return;
+      }
+      const headers = ['history_id', 'service_id', 'action_type', 'instances_before', 'instances_after', 'cost_before', 'cost_after', 'latency_before', 'latency_after', 'status', 'created_at', 'notes'];
+      const rows = records.map(r => headers.map(h => `"${(r[h] ?? '').toString().replace(/"/g, '""')}"`).join(','));
+      const csvContent = [headers.join(','), ...rows].join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `cloud_guardian_audit_report_${timestamp}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+  } catch (err) {
+    alert(`Export failed: ${err.message}`);
+  }
+}
+

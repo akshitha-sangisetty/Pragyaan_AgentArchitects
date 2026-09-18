@@ -23,6 +23,14 @@ class ServiceState(BaseModel):
     timestamp: str = Field(..., description="Observation ISO timestamp (e.g. 2026-09-17T10:30:00Z)")
 
 
+class UserGoals(BaseModel):
+    """Developer-defined goals and boundaries from Step 1 of P3."""
+    target_cost_reduction_percent: float = Field(25.0, description="Target reduction percentage (e.g. 25%)")
+    max_acceptable_latency_ms: float = Field(300.0, description="Global maximum acceptable latency SLA")
+    max_hourly_budget: float = Field(50.0, description="Maximum allowable total hourly cloud spend")
+    monitoring_enabled: bool = Field(True, description="Live continuous monitoring toggle")
+
+
 class ServiceInvestigation(BaseModel):
     service_id: str
     current_state: ServiceState

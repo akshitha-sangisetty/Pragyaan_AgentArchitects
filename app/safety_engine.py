@@ -17,19 +17,41 @@ def validate_proposed_action(
     action_type: str,
     target_instances: int,
     is_fresh: bool = True,
-    current_rpm: Optional[int] = None
+    current_rpm: Optional[int] = None,
+    user_goals: Optional[Dict[str, Any]] = None,
+    last_action_time: Optional[str] = None,
+    cooldown_seconds: int = 0
 ) -> SafetyCheckResult:
     """
     Deterministic safety validator.
-    Returns SafetyCheckResult with approved=True/False and exact reason/violations.
+    Enforces service bounds + developer-configured goals (Step 1 of P3) + cooldown protection.
     """
     violations: List[str] = []
+    
+    # Effective latency SLA from service and user goals
+    effective_max_latency = service.max_latency_ms
+    if user_goals and "max_acceptable_latency_ms" in user_goals:
+        effective_max_latency = min(service.max_latency_ms, float(user_goals["max_acceptable_latency_ms"]))
 
-    # 1. Freshness check: Cannot optimize on stale observation
+    # 1. Cooldown Check (Anti-Thrashing)
+    if last_action_time and cooldown_seconds > 0 and action_type not in ["no_action"]:
+        try:
+            from datetime import datetime, timezone
+            t_last = datetime.fromisoformat(last_action_time.replace("Z", "+00:00"))
+            t_now = datetime.now(timezone.utc)
+            elapsed = (t_now - t_last).total_seconds()
+            if elapsed < cooldown_seconds:
+                violations.append(
+                    f"Action blocked by cooldown guard: Service was modified {int(elapsed)}s ago (cooldown is {cooldown_seconds}s)."
+                )
+        except Exception:
+            pass
+
+    # 2. Freshness check: Cannot optimize on stale observation
     if not is_fresh:
         violations.append("Observation data is stale (>15 minutes old). Fresh telemetry required before changes.")
 
-    # 2. Service health check: Do not scale down unhealthy services
+    # 3. Service health check: Do not scale down unhealthy services
     if not service.healthy and action_type in ["scale_down", "stop_idle_service"]:
         violations.append("Service is currently unhealthy. Remediation required before cost optimization.")
 
@@ -47,7 +69,16 @@ def validate_proposed_action(
                 f"Requested instances ({target_instances}) exceeds maximum capacity limit ({service.max_instances})."
             )
 
-    # 5. Latency SLA projection check for scale down
+    # 5. Budget Cap Check (Step 1 of P3)
+    if action_type == "scale_up" and user_goals and "max_hourly_budget" in user_goals:
+        cost_per_unit = service.cost_per_hour / max(1, service.instances)
+        projected_service_cost = cost_per_unit * target_instances
+        if projected_service_cost > float(user_goals["max_hourly_budget"]):
+            violations.append(
+                f"Projected cost (${round(projected_service_cost, 2)}/hr) exceeds developer budget cap (${user_goals['max_hourly_budget']}/hr)."
+            )
+
+    # 6. Latency SLA projection check for scale down
     if action_type == "scale_down" and service.instances > 0 and target_instances > 0:
         effective_rpm = current_rpm if current_rpm is not None else service.requests_per_minute
         ratio = service.instances / target_instances
@@ -59,9 +90,9 @@ def validate_proposed_action(
         if effective_rpm > service.requests_per_minute * 1.5:
             projected_latency += 50.0
 
-        if projected_latency >= service.max_latency_ms:
+        if projected_latency >= effective_max_latency:
             violations.append(
-                f"Projected latency ({round(projected_latency, 1)} ms) threatens max latency SLA ({service.max_latency_ms} ms)."
+                f"Projected latency ({round(projected_latency, 1)} ms) threatens max latency SLA boundary ({effective_max_latency} ms)."
             )
 
     # 6. Aggressive downscaling check (safety brake for live traffic)
