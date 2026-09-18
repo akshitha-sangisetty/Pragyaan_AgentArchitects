@@ -19,13 +19,93 @@ let telemetryChart = null;
 let monitoringActive = true;
 let monitoringTimer = null;
 
+// ==========================================================================
+// Dynamic API Endpoint Resolver (Render + Vercel)
+// ==========================================================================
+
+function getApiBaseUrl() {
+  const custom = localStorage.getItem('API_BASE_URL');
+  if (custom && custom.trim() !== '') {
+    return custom.trim().replace(/\/+$/, '');
+  }
+  if (window.API_BASE_URL && window.API_BASE_URL.trim() !== '') {
+    return window.API_BASE_URL.trim().replace(/\/+$/, '');
+  }
+  return '';
+}
+
+function apiUrl(endpoint) {
+  const base = getApiBaseUrl();
+  return base ? `${base}${endpoint}` : endpoint;
+}
+
+async function checkBackendHealth() {
+  const dot = document.getElementById('backend-status-dot');
+  const urlLabel = document.getElementById('backend-status-url');
+  const badge = document.getElementById('backend-status-badge');
+  const base = getApiBaseUrl();
+  if (urlLabel) {
+    if (base) {
+      try {
+        const u = new URL(base);
+        urlLabel.textContent = u.hostname.replace('.onrender.com', '');
+      } catch (_) {
+        urlLabel.textContent = 'Render';
+      }
+    } else {
+      urlLabel.textContent = 'Direct/Local';
+    }
+  }
+  try {
+    const res = await fetch(apiUrl('/health'), { method: 'GET' });
+    if (res.ok) {
+      if (dot) dot.className = 'status-dot dot-online';
+      if (badge) badge.title = `Connected to backend: ${base || 'Local'}`;
+    } else {
+      if (dot) dot.className = 'status-dot dot-warning';
+    }
+  } catch (err) {
+    if (dot) dot.className = 'status-dot dot-offline';
+    if (badge) badge.title = `Failed to connect. Click to configure URL.`;
+  }
+}
+
+function openBackendConfigModal() {
+  const modal = document.getElementById('backend-modal');
+  const input = document.getElementById('backend-url-input');
+  if (input) input.value = localStorage.getItem('API_BASE_URL') || window.API_BASE_URL || '';
+  if (modal) modal.classList.remove('hidden');
+}
+
+function closeBackendConfigModal() {
+  const modal = document.getElementById('backend-modal');
+  if (modal) modal.classList.add('hidden');
+}
+
+async function saveBackendConfig() {
+  const input = document.getElementById('backend-url-input');
+  let val = (input ? input.value : '').trim();
+  if (val.endsWith('/')) val = val.slice(0, -1);
+  if (val) {
+    localStorage.setItem('API_BASE_URL', val);
+  } else {
+    localStorage.removeItem('API_BASE_URL');
+  }
+  closeBackendConfigModal();
+  await checkBackendHealth();
+  await loadScenario(currentScenarioId);
+  await fetchHistory();
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+  checkBackendHealth();
   initTelemetryChart();
   fetchGoals();
   loadScenario('test_a');
   fetchHistory();
   setInterval(updateClock, 1000);
   startMonitoringLoop();
+  setInterval(checkBackendHealth, 30000);
 });
 
 function updateClock() {
@@ -42,7 +122,7 @@ function updateClock() {
 
 async function fetchGoals() {
   try {
-    const res = await fetch('/api/goals');
+    const res = await fetch(apiUrl('/api/goals'));
     const goals = await res.json();
     document.getElementById('goal-reduction').value = goals.target_cost_reduction_percent;
     document.getElementById('goal-latency').value = goals.max_acceptable_latency_ms;
@@ -67,7 +147,7 @@ async function saveGoals() {
     monitoring_enabled: monitoringActive
   };
   try {
-    await fetch('/api/goals', {
+    await fetch(apiUrl('/api/goals'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(goals)
@@ -106,7 +186,7 @@ function startMonitoringLoop() {
   monitoringTimer = setInterval(async () => {
     if (!monitoringActive) return;
     try {
-      const res = await fetch('/api/telemetry/tick', { method: 'POST' });
+      const res = await fetch(apiUrl('/api/telemetry/tick'), { method: 'POST' });
       const updated = await res.json();
       currentServices = updated;
       renderServicesList(updated);
@@ -200,7 +280,7 @@ async function loadScenario(scenarioId) {
   if (activeBtn) activeBtn.classList.add('active');
 
   try {
-    const res = await fetch('/api/scenario/load', {
+    const res = await fetch(apiUrl('/api/scenario/load'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ scenario_id: scenarioId })
@@ -232,7 +312,7 @@ async function loadScenario(scenarioId) {
 
 async function fetchServices() {
   try {
-    const res = await fetch('/api/services');
+    const res = await fetch(apiUrl('/api/services'));
     currentServices = await res.json();
     renderServicesList(currentServices);
     populateManualDropdown(currentServices);
@@ -346,7 +426,7 @@ async function runRecommend() {
   cardsContainer.innerHTML = `<div class="loading-spinner" style="text-align:center;padding:24px;color:var(--primary);">Agent 1 (Investigator) inspecting telemetry & freshness...</div>`;
 
   try {
-    const res = await fetch('/api/recommend', {
+    const res = await fetch(apiUrl('/api/recommend'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ user_prompt: prompt, auto_apply: false })
@@ -454,7 +534,7 @@ function renderAgentPipeline(result) {
 
 async function applyAction(serviceId, actionType, targetInstances) {
   try {
-    const res = await fetch('/api/apply-action', {
+    const res = await fetch(apiUrl('/api/apply-action'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -525,7 +605,7 @@ async function triggerRollback() {
   if (!serviceId) return;
 
   try {
-    const res = await fetch('/api/rollback', {
+    const res = await fetch(apiUrl('/api/rollback'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ service_id: serviceId })
@@ -594,7 +674,7 @@ function evaluateManualChangeDebounced(serviceId, targetInstances) {
   clearTimeout(sliderTimeout);
   sliderTimeout = setTimeout(async () => {
     try {
-      const res = await fetch('/api/evaluate-manual', {
+      const res = await fetch(apiUrl('/api/evaluate-manual'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ service_id: serviceId, target_instances: targetInstances })
@@ -648,7 +728,7 @@ async function applyManualChange() {
 
 async function fetchHistory() {
   try {
-    const res = await fetch('/api/history');
+    const res = await fetch(apiUrl('/api/history'));
     const data = await res.json();
     renderMemoryList(data.optimization_history);
   } catch (err) {
@@ -704,7 +784,7 @@ function resetDiffView() {
 
 async function exportAuditReport(format) {
   try {
-    const res = await fetch('/api/history');
+    const res = await fetch(apiUrl('/api/history'));
     const data = await res.json();
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     

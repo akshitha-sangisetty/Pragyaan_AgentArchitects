@@ -211,3 +211,16 @@ def test_cooldown_anti_thrashing_guard():
     assert any("cooldown guard" in rule for rule in cooldown_check.violated_rules)
 
 
+def test_health_check():
+    """Verify the /health endpoint used by Render uptime monitor."""
+    from fastapi.testclient import TestClient
+    from app.main import app
+    client = TestClient(app)
+    response = client.get("/health")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "ok"
+    assert "service" in data
+
+
+

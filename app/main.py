@@ -82,6 +82,12 @@ def startup_event():
 
 
 # API Endpoints
+@app.get("/health")
+def health_check():
+    """Health check endpoint for Render uptime monitoring."""
+    return {"status": "ok", "service": "pragyaan-agent-backend"}
+
+
 @app.get("/api/services")
 def list_services():
     """Retrieve all current cloud services and metrics."""
@@ -208,6 +214,21 @@ if FRONTEND_DIR.exists():
     @app.get("/")
     def serve_dashboard():
         return FileResponse(str(FRONTEND_DIR / "index.html"))
+
+    @app.get("/styles.css")
+    def serve_styles():
+        return FileResponse(str(FRONTEND_DIR / "styles.css"))
+
+    @app.get("/app.js")
+    def serve_app_js():
+        return FileResponse(str(FRONTEND_DIR / "app.js"))
+
+    @app.get("/config.js")
+    def serve_config_js():
+        cfg_file = FRONTEND_DIR / "config.js"
+        if cfg_file.exists():
+            return FileResponse(str(cfg_file))
+        return JSONResponse(content={})
 
 
 if __name__ == "__main__":

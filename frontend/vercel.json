@@ -1,0 +1,10 @@
+{
+  "framework": null,
+  "cleanUrls": true,
+  "rewrites": [
+    {
+      "source": "/static/(.*)",
+      "destination": "/$1"
+    }
+  ]
+}

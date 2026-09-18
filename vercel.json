@@ -1,0 +1,11 @@
+{
+  "framework": null,
+  "outputDirectory": "frontend",
+  "cleanUrls": true,
+  "rewrites": [
+    {
+      "source": "/static/(.*)",
+      "destination": "/$1"
+    }
+  ]
+}
