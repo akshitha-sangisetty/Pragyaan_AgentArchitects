@@ -1,11 +1,6 @@
 /**
  * Autonomous Cloud Cost Optimization Engine — Frontend Logic
- * Supports:
- * - Scenario Switching (Test A, B, C, D)
- * - Path A: Autonomous 3-Agent Closed Loop (Telemetry Analyst -> Cost Optimizer -> Safety Validator -> Action -> Verifier)
- * - Path B: Manual What-If Slider with Instant Safety Pre-Flight Check
- * - Before vs After Verification Diff Card & Financial Savings Outcome
- * - Real-Time Audit Activity Timeline & Historical Memory Log (Step 9)
+ * Simplified Human-Understandable Labels for Review Presentation
  */
 
 let currentServices = [];
@@ -129,7 +124,7 @@ function addTimelineEvent(category, description) {
   
   auditTimelineEvents.unshift({
     time: timeStr,
-    category: category, // 'investigation', 'proposal', 'safety', 'action', 'blocked'
+    category: category,
     description: description
   });
 
@@ -252,7 +247,7 @@ function initTelemetryChart() {
       labels: [],
       datasets: [
         {
-          label: 'Current Latency (ms)',
+          label: 'Response Delay / Speed (ms)',
           data: [],
           backgroundColor: 'rgba(6, 182, 212, 0.65)',
           borderColor: '#06b6d4',
@@ -260,7 +255,7 @@ function initTelemetryChart() {
           borderRadius: 4
         },
         {
-          label: 'Max Latency SLA Boundary',
+          label: 'Max Allowed Speed Limit',
           data: [],
           type: 'line',
           borderColor: '#f43f5e',
@@ -305,7 +300,7 @@ function updateTelemetryChart(services) {
   telemetryChart.data.labels = labels;
   telemetryChart.data.datasets[0].data = latencies;
   telemetryChart.data.datasets[1].data = slas;
-  telemetryChart.update('none'); // Update without full redraw animation
+  telemetryChart.update('none');
 }
 
 // ==========================================================================
@@ -328,9 +323,27 @@ async function loadScenario(scenarioId) {
     });
     const data = await res.json();
 
+    // Friendly Scenario Descriptions
+    let friendlyName = data.name;
+    let friendlyDesc = data.description;
+
+    if (scenarioId === 'test_a') {
+      friendlyName = 'Scenario A — Wasted Money (Over-Provisioned Servers)';
+      friendlyDesc = 'Server has too much unused capacity (6 servers). Goal: Reduce server count to save money without slowing down the website.';
+    } else if (scenarioId === 'test_b') {
+      friendlyName = 'Scenario B — High Visitor Traffic (Scale Up Required)';
+      friendlyDesc = 'Traffic is surging rapidly. Goal: Add more servers so the website stays fast and does not crash under high load.';
+    } else if (scenarioId === 'test_c') {
+      friendlyName = 'Scenario C — Outdated Server Data (Safety Guard Block)';
+      friendlyDesc = 'Server telemetry data is old (>15 min). Goal: Safety Guard must block any changes until fresh data arrives.';
+    } else if (scenarioId === 'test_d') {
+      friendlyName = 'Scenario D — Risky Server Action (Safety Guard Block)';
+      friendlyDesc = 'Proposed server reduction threatens website response speed limit. Goal: Safety Guard detects danger and blocks action.';
+    }
+
     // Update Context Banner
-    document.getElementById('scenario-name').textContent = data.name;
-    document.getElementById('scenario-desc').textContent = data.description;
+    document.getElementById('scenario-name').textContent = friendlyName;
+    document.getElementById('scenario-desc').textContent = friendlyDesc;
     document.getElementById('scenario-prompt').textContent = `"${data.prompt}"`;
     document.getElementById('prompt-input').value = data.prompt;
 
@@ -340,7 +353,7 @@ async function loadScenario(scenarioId) {
     updateStepperProgress('reset');
 
     // Add timeline log
-    addTimelineEvent('investigation', `Loaded Test Scenario ${scenarioId.toUpperCase()}: ${data.name}`);
+    addTimelineEvent('investigation', `Loaded Demo Scenario: ${friendlyName}`);
 
     // Refresh telemetry
     await fetchServices();
@@ -372,18 +385,16 @@ function renderServicesList(services) {
   if (!container) return;
 
   if (services.length === 0) {
-    container.innerHTML = '<div class="empty-text">No services in registry.</div>';
+    container.innerHTML = '<div class="empty-text">No active servers found.</div>';
     return;
   }
 
   container.innerHTML = services.map(svc => {
-    // Latency bar percentage
     const latPercent = Math.min(100, Math.round((svc.latency_ms / svc.max_latency_ms) * 100));
     let barColorClass = '';
     if (latPercent > 80) barColorClass = 'danger';
     else if (latPercent > 65) barColorClass = 'warning';
 
-    // Freshness check: If timestamp is stale (e.g. 08:00)
     const isStale = svc.timestamp && svc.timestamp.includes('08:00');
 
     return `
@@ -391,33 +402,33 @@ function renderServicesList(services) {
         <div class="service-card-header">
           <span class="service-id">${svc.service_id}</span>
           <span class="service-status-badge ${isStale ? 'status-stale' : 'status-healthy'}">
-            ${isStale ? '⚠️ Stale Telemetry' : '● Healthy & Fresh'}
+            ${isStale ? '⚠️ Outdated Server Data' : '● Healthy & Up-to-Date'}
           </span>
         </div>
 
         <div class="telemetry-grid">
           <div class="metric-item">
-            <span class="metric-label">Instances</span>
-            <span class="metric-val" style="color:var(--primary);">${svc.instances} nodes</span>
+            <span class="metric-label">Active Servers</span>
+            <span class="metric-val" style="color:var(--primary);">${svc.instances} servers</span>
           </div>
           <div class="metric-item">
-            <span class="metric-label">Hourly Cost</span>
+            <span class="metric-label">Hourly Spend</span>
             <span class="metric-val">$${svc.cost_per_hour}/hr</span>
           </div>
           <div class="metric-item">
-            <span class="metric-label">CPU Utilization</span>
+            <span class="metric-label">Server Load (CPU)</span>
             <span class="metric-val">${svc.cpu_percent}%</span>
           </div>
           <div class="metric-item">
-            <span class="metric-label">Traffic Rate</span>
+            <span class="metric-label">Visitors / Traffic</span>
             <span class="metric-val">${svc.requests_per_minute} RPM</span>
           </div>
         </div>
 
         <div class="latency-bar-box">
           <div class="latency-bar-header">
-            <span>P95 Latency: <strong>${svc.latency_ms} ms</strong></span>
-            <span>SLA: ${svc.max_latency_ms} ms</span>
+            <span>Response Delay: <strong>${svc.latency_ms} ms</strong></span>
+            <span>Speed Limit: ${svc.max_latency_ms} ms</span>
           </div>
           <div class="latency-bar-track">
             <div class="latency-bar-fill ${barColorClass}" style="width: ${latPercent}%;"></div>
@@ -446,7 +457,7 @@ async function runRecommend() {
   const prompt = promptInput.value.trim();
 
   runBtn.disabled = true;
-  runBtn.innerHTML = `Running Pipeline...`;
+  runBtn.innerHTML = `Running AI Analysis...`;
 
   const placeholder = document.getElementById('pipeline-placeholder');
   const cardsContainer = document.getElementById('agent-cards');
@@ -454,11 +465,11 @@ async function runRecommend() {
   cardsContainer.classList.remove('hidden');
 
   updateStepperProgress('agent1');
-  addTimelineEvent('investigation', `Triggered 3-Agent closed loop with prompt: "${prompt}"`);
+  addTimelineEvent('investigation', `Started AI analysis for goal: "${prompt}"`);
 
   cardsContainer.innerHTML = `<div class="loading-spinner" style="text-align:center;padding:24px;color:var(--primary);">
-    <div style="font-size:14px;font-weight:700;margin-bottom:6px;">Agent 1: Telemetry Analyst</div>
-    <div style="font-size:11px;color:var(--text-muted);">Inspecting cloud service metrics, CPU, RAM, latency & freshness...</div>
+    <div style="font-size:14px;font-weight:700;margin-bottom:6px;">Agent 1: Data Inspector</div>
+    <div style="font-size:11px;color:var(--text-muted);">Reading server metrics, workload, speed & data freshness...</div>
   </div>`;
 
   try {
@@ -471,12 +482,12 @@ async function runRecommend() {
     
     renderAgentPipeline(result);
   } catch (err) {
-    cardsContainer.innerHTML = `<div class="error-msg">Error executing recommendation pipeline: ${err.message}</div>`;
+    cardsContainer.innerHTML = `<div class="error-msg">Error running AI analysis: ${err.message}</div>`;
   } finally {
     runBtn.disabled = false;
     runBtn.innerHTML = `
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-      Recommend
+      Run AI Analysis & Recommend
     `;
   }
 }
@@ -504,7 +515,7 @@ function updateStepperProgress(stage) {
 function renderAgentPipeline(result) {
   const container = document.getElementById('agent-cards');
   if (!result || !result.proposals || result.proposals.length === 0) {
-    container.innerHTML = '<div class="empty-text">No service recommendations generated.</div>';
+    container.innerHTML = '<div class="empty-text">No recommendations generated.</div>';
     return;
   }
 
@@ -514,112 +525,130 @@ function renderAgentPipeline(result) {
     const safety = item.safety;
     const state = inv.current_state;
 
-    // Diagnosis Badge style
+    // Beginner Friendly Diagnosis Labels
+    let diagnosisLabel = inv.diagnosis;
     let diagBadgeClass = 'badge-blue';
-    if (inv.diagnosis === 'RISING_TRAFFIC') diagBadgeClass = 'badge-amber';
-    if (inv.diagnosis === 'CRITICAL_LOAD') diagBadgeClass = 'badge-red';
-    if (inv.diagnosis === 'UNDER_UTILIZATION' || inv.diagnosis === 'OVER_PROVISIONED') diagBadgeClass = 'badge-green';
 
-    // Confidence & Risk Rating
-    const confidenceScore = inv.is_fresh ? '94%' : '70%';
+    if (inv.diagnosis === 'OVER_PROVISIONED' || inv.diagnosis === 'UNDER_UTILIZATION') {
+      diagnosisLabel = 'WASTED SPEND (Too Many Servers)';
+      diagBadgeClass = 'badge-green';
+    } else if (inv.diagnosis === 'RISING_TRAFFIC') {
+      diagnosisLabel = 'HIGH TRAFFIC (Add Capacity)';
+      diagBadgeClass = 'badge-amber';
+    } else if (inv.diagnosis === 'CRITICAL_LOAD') {
+      diagnosisLabel = 'CRITICAL OVERLOAD (Action Required)';
+      diagBadgeClass = 'badge-red';
+    } else if (inv.diagnosis === 'STALE_TELEMETRY') {
+      diagnosisLabel = 'OUTDATED DATA (Must Refresh)';
+      diagBadgeClass = 'badge-amber';
+    }
+
+    // Strategy Labels
+    let actionLabel = prop.action_type.toUpperCase();
+    if (prop.action_type === 'scale_down') actionLabel = 'Reduce Servers (Save Money)';
+    if (prop.action_type === 'scale_up') actionLabel = 'Add Servers (Handle Traffic)';
+    if (prop.action_type === 'no_action') actionLabel = 'Keep Current Setup';
+
+    // Confidence & Savings
+    const confidenceScore = inv.is_fresh ? '94% (High)' : '70% (Medium)';
     const savingsAmount = prop.projected_cost_delta_per_hr < 0 ? Math.abs(prop.projected_cost_delta_per_hr) : 0;
     const savingsPercent = state.cost_per_hour > 0 ? Math.round((savingsAmount / state.cost_per_hour) * 100) : 0;
 
     // Timeline logging
-    addTimelineEvent('investigation', `Agent 1 Finding: ${item.service_id} diagnosed as ${inv.diagnosis} (Freshness: ${inv.is_fresh ? 'YES' : 'STALE'}).`);
-    addTimelineEvent('proposal', `Agent 2 Recommendation: ${prop.action_type.toUpperCase()} from ${prop.current_instances} → ${prop.target_instances} nodes (Savings: -$${savingsAmount}/hr).`);
+    addTimelineEvent('investigation', `Agent 1: Data Inspector analyzed ${item.service_id} -> ${diagnosisLabel}.`);
+    addTimelineEvent('proposal', `Agent 2: Cost Saver proposed ${actionLabel} (${prop.current_instances} -> ${prop.target_instances} servers). Savings: -$${savingsAmount}/hr.`);
     
     if (safety.approved) {
-      addTimelineEvent('safety', `Agent 3 Safety Validator: APPROVED action for ${item.service_id}. Satisfies SLA & bounds.`);
+      addTimelineEvent('safety', `Agent 3: Safety Guard APPROVED recommendation for ${item.service_id}.`);
       updateStepperProgress('agent3');
     } else {
-      addTimelineEvent('blocked', `Agent 3 Safety Validator: BLOCKED action for ${item.service_id}. Reason: ${safety.reason}`);
+      addTimelineEvent('blocked', `Agent 3: Safety Guard BLOCKED recommendation for ${item.service_id}. Reason: ${safety.reason}`);
       const sNode = document.getElementById('step-node-agent3');
       if (sNode) sNode.className = 'stepper-step active blocked';
     }
 
-    // Safety Checklist rules list
+    // Safety Checklist rules list with clear human names
     const safetyChecklist = [
-      { name: 'SLA Latency Boundary Check', passed: !safety.violated_rules.some(r => r.includes('latency')) },
-      { name: 'Service Health Gate', passed: !safety.violated_rules.some(r => r.includes('unhealthy')) },
-      { name: 'Observation Data Freshness Gate', passed: inv.is_fresh },
-      { name: 'Minimum Capacity Guard', passed: !safety.violated_rules.some(r => r.includes('minimum')) },
-      { name: 'Hourly Budget Cap Check', passed: !safety.violated_rules.some(r => r.includes('budget')) },
-      { name: 'Single Step Scaling Limit', passed: !safety.violated_rules.some(r => r.includes('single step')) }
+      { name: 'Response Speed within Safe Limit', passed: !safety.violated_rules.some(r => r.includes('latency')) },
+      { name: 'Server Health Status OK', passed: !safety.violated_rules.some(r => r.includes('unhealthy')) },
+      { name: 'Server Data is Fresh & Current', passed: inv.is_fresh },
+      { name: 'Meets Minimum Server Requirement', passed: !safety.violated_rules.some(r => r.includes('minimum')) },
+      { name: 'Fits Hourly Budget Limit', passed: !safety.violated_rules.some(r => r.includes('budget')) },
+      { name: 'Safe Step-by-Step Change', passed: !safety.violated_rules.some(r => r.includes('single step')) }
     ];
 
     return `
       <div class="agent-pipeline-grid">
-        <!-- AGENT 1: TELEMETRY ANALYST -->
+        <!-- AGENT 1: DATA INSPECTOR -->
         <div class="agent-node-card agent-1">
           <div class="agent-node-header">
             <span class="agent-node-title">
-              <span>🔍 AGENT 1 — TELEMETRY ANALYST</span>
+              <span>🔍 AGENT 1: DATA INSPECTOR</span>
             </span>
-            <span class="agent-node-status ${diagBadgeClass}">${inv.diagnosis}</span>
+            <span class="agent-node-status ${diagBadgeClass}">${diagnosisLabel}</span>
           </div>
 
           <div class="agent-finding-box">
-            <p><strong>Finding:</strong> ${inv.diagnosis_reason}</p>
+            <p><strong>Inspection Summary:</strong> ${inv.diagnosis_reason}</p>
             <div style="font-size:10px;margin-top:4px;font-family:var(--font-mono);color:var(--text-dim);">
-              Target: <strong>${item.service_id}</strong> | Freshness: <strong>${inv.is_fresh ? 'FRESH' : 'STALE (>15m)'}</strong>
+              Target: <strong>${item.service_id}</strong> | Data Status: <strong>${inv.is_fresh ? 'Fresh Data' : 'Old Data (>15m)'}</strong>
             </div>
           </div>
 
           <div class="agent-metrics-row">
             <div class="agent-metric-chip">
-              <span>CPU:</span> <strong>${state.cpu_percent}%</strong>
+              <span>Server Load:</span> <strong>${state.cpu_percent}%</strong>
             </div>
             <div class="agent-metric-chip">
-              <span>Traffic:</span> <strong>${state.requests_per_minute} RPM</strong>
+              <span>Visitors:</span> <strong>${state.requests_per_minute} RPM</strong>
             </div>
             <div class="agent-metric-chip">
-              <span>Latency:</span> <strong>${state.latency_ms} ms</strong>
+              <span>Delay:</span> <strong>${state.latency_ms} ms</strong>
             </div>
             <div class="agent-metric-chip">
-              <span>Confidence:</span> <strong style="color:var(--primary);">${confidenceScore}</strong>
+              <span>AI Certainty:</span> <strong style="color:var(--primary);">${confidenceScore}</strong>
             </div>
           </div>
         </div>
 
-        <!-- AGENT 2: COST OPTIMIZER -->
+        <!-- AGENT 2: COST SAVER -->
         <div class="agent-node-card agent-2">
           <div class="agent-node-header">
             <span class="agent-node-title">
-              <span>💡 AGENT 2 — COST OPTIMIZER</span>
+              <span>💡 AGENT 2: COST SAVER</span>
             </span>
-            <span class="agent-node-status badge-purple">${prop.action_type.toUpperCase()}</span>
+            <span class="agent-node-status badge-purple">${actionLabel}</span>
           </div>
 
           <div class="agent-finding-box">
-            <p><strong>Strategy Rationale:</strong> ${prop.reason}</p>
+            <p><strong>Cost Strategy:</strong> ${prop.reason}</p>
           </div>
 
           <div class="agent-metrics-row">
             <div class="agent-metric-chip">
-              <span>Instance Delta:</span> <strong>${prop.current_instances} → ${prop.target_instances}</strong>
+              <span>Server Change:</span> <strong>${prop.current_instances} → ${prop.target_instances} servers</strong>
             </div>
             <div class="agent-metric-chip">
-              <span>Cost Impact:</span> <strong style="color:var(--success);">${savingsAmount > 0 ? `-$${savingsAmount}/hr` : '$0/hr'}</strong>
+              <span>Hourly Savings:</span> <strong style="color:var(--success);">${savingsAmount > 0 ? `-$${savingsAmount}/hr` : '$0/hr'}</strong>
             </div>
             <div class="agent-metric-chip">
-              <span>Estimated Saving:</span> <strong style="color:var(--success);">${savingsPercent}%</strong>
+              <span>Cost Reduction:</span> <strong style="color:var(--success);">${savingsPercent}% cheaper</strong>
             </div>
             <div class="agent-metric-chip">
-              <span>Latency Risk:</span> <strong style="color:${prop.projected_latency_impact === 'LOW' ? 'var(--success)' : 'var(--warning)'}">${prop.projected_latency_impact}</strong>
+              <span>Speed Risk:</span> <strong style="color:${prop.projected_latency_impact === 'LOW' ? 'var(--success)' : 'var(--warning)'}">${prop.projected_latency_impact}</strong>
             </div>
           </div>
           ${prop.memory_referenced ? `<div style="font-size:10px;color:var(--accent);margin-top:2px;">🧠 Memory Recall: ${prop.memory_referenced}</div>` : ''}
         </div>
 
-        <!-- AGENT 3: SAFETY VALIDATOR -->
+        <!-- AGENT 3: SAFETY GUARD -->
         <div class="agent-node-card agent-3 ${safety.approved ? '' : 'blocked'}">
           <div class="agent-node-header">
             <span class="agent-node-title">
-              <span>🛡️ AGENT 3 — SAFETY VALIDATOR</span>
+              <span>🛡️ AGENT 3: SAFETY GUARD</span>
             </span>
             <span class="agent-node-status ${safety.approved ? 'badge-green' : 'badge-red'}">
-              ${safety.approved ? '✓ APPROVED' : '! BLOCKED'}
+              ${safety.approved ? '✓ APPROVED (Safe)' : '! BLOCKED (Unsafe)'}
             </span>
           </div>
 
@@ -633,7 +662,7 @@ function renderAgentPipeline(result) {
           </div>
 
           <div class="agent-finding-box" style="margin-top:6px;border-left:2px solid ${safety.approved ? 'var(--success)' : 'var(--danger)'}">
-            <strong>Safety Verdict:</strong> ${safety.reason}
+            <strong>Safety Decision:</strong> ${safety.reason}
           </div>
         </div>
       </div>
@@ -642,17 +671,17 @@ function renderAgentPipeline(result) {
       ${safety.approved && prop.action_type !== 'no_action' ? `
         <div class="action-cta-box">
           <div>
-            <div style="font-size:13px;font-weight:700;color:#fff;">Action Executor Stage: Ready to Apply</div>
-            <div style="font-size:11px;color:var(--text-muted);">Proposed: Scale <strong>${item.service_id}</strong> from ${prop.current_instances} → ${prop.target_instances} instances</div>
+            <div style="font-size:13px;font-weight:700;color:#fff;">5. Action Stage: Ready to Apply Safe Change</div>
+            <div style="font-size:11px;color:var(--text-muted);">Proposed: Change <strong>${item.service_id}</strong> from ${prop.current_instances} → ${prop.target_instances} servers</div>
           </div>
           <button class="primary-btn" onclick="applyAction('${item.service_id}', '${prop.action_type}', ${prop.target_instances})">
-            Apply Action (${prop.action_type})
+            Apply Safe Changes to Live Cloud
           </button>
         </div>
       ` : `
         <div class="action-cta-box" style="border-color:var(--border-subtle);background:rgba(0,0,0,0.3);">
           <div style="font-size:12px;color:var(--text-dim);">
-            ${safety.approved ? 'No optimization action required for this service state.' : '<strong>Action Execution Halted:</strong> Blocked by Deterministic Safety Validator.'}
+            ${safety.approved ? 'No changes needed for this server right now.' : '<strong>Action Blocked:</strong> Safety Guard stopped this change to protect performance.'}
           </div>
         </div>
       `}
@@ -667,7 +696,7 @@ function renderAgentPipeline(result) {
 async function applyAction(serviceId, actionType, targetInstances) {
   try {
     updateStepperProgress('action');
-    addTimelineEvent('action', `Applying action '${actionType}' on ${serviceId} to ${targetInstances} instances...`);
+    addTimelineEvent('action', `Applying safe server change on ${serviceId} to ${targetInstances} servers...`);
 
     const res = await fetch(apiUrl('/api/apply-action'), {
       method: 'POST',
@@ -681,7 +710,7 @@ async function applyAction(serviceId, actionType, targetInstances) {
     const result = await res.json();
 
     updateStepperProgress('verify');
-    addTimelineEvent('action', `Action successfully executed on ${serviceId}. Verifying post-action telemetry...`);
+    addTimelineEvent('action', `Server change applied to ${serviceId}. Verifying new speed and savings...`);
 
     // Render Before vs After Diff Card & Outcome Highlights
     renderDiffCard(result);
@@ -710,7 +739,7 @@ function renderDiffCard(result) {
   const summaryBox = document.getElementById('diff-summary-text');
   const recoveryBox = document.getElementById('recovery-box');
 
-  statusBadge.textContent = ver.status;
+  statusBadge.textContent = ver.status === 'SUCCESS' ? 'VERIFIED PASSED' : 'DEGRADED';
   statusBadge.className = `pill-badge ${ver.status === 'SUCCESS' ? 'status-healthy' : 'badge-red'}`;
   summaryBox.textContent = ver.summary;
 
@@ -722,21 +751,30 @@ function renderDiffCard(result) {
     document.getElementById('chip-hourly-saved').textContent = `$${hourlySaved.toFixed(2)}/hr`;
     document.getElementById('chip-daily-saved').textContent = `$${dailySaved}/day`;
     
-    addTimelineEvent('action', `Verification Complete: Saved $${hourlySaved.toFixed(2)}/hr ($${dailySaved}/day). SLA Preserved.`);
+    addTimelineEvent('action', `Verification Complete: Money Saved: $${hourlySaved.toFixed(2)}/hr ($${dailySaved}/day). Speed Limit OK.`);
   }
+
+  // Friendly Table Metric Names
+  const metricNameMap = {
+    'Active Instances': 'Active Servers',
+    'Cost per Hour': 'Hourly Spend ($/hr)',
+    'CPU %': 'Server Load (CPU %)',
+    'Latency P95': 'Response Delay (Speed ms)',
+    'Requests per Minute': 'Visitor Traffic (RPM)'
+  };
 
   // Render Table rows
   const tbody = document.getElementById('diff-table-body');
   if (ver.comparisons && ver.comparisons.length > 0) {
     tbody.innerHTML = ver.comparisons.map(c => `
       <tr>
-        <td><strong>${c.metric_name}</strong></td>
+        <td><strong>${metricNameMap[c.metric_name] || c.metric_name}</strong></td>
         <td>${c.before} ${c.unit}</td>
         <td>${c.after} ${c.unit}</td>
         <td class="${c.change_percent <= 0 ? 'diff-change-positive' : 'diff-change-negative'}">
           ${c.change_percent > 0 ? `+${c.change_percent}%` : `${c.change_percent}%`}
         </td>
-        <td style="color:var(--text-dim);">${c.metric_name === 'Latency P95' ? `${before ? before.max_latency_ms : 300} ms` : 'PASS'}</td>
+        <td style="color:var(--text-dim);">${c.metric_name.includes('Latency') ? `${before ? before.max_latency_ms : 300} ms` : 'PASS'}</td>
       </tr>
     `).join('');
   } else {
@@ -747,7 +785,7 @@ function renderDiffCard(result) {
   if (ver.recovery_recommended) {
     recoveryBox.classList.remove('hidden');
     recoveryBox.dataset.serviceId = result.action_result.service_id;
-    addTimelineEvent('blocked', `WARNING: Post-action degradation detected on ${result.action_result.service_id}. Rollback recommended.`);
+    addTimelineEvent('blocked', `WARNING: Delay increased beyond limit on ${result.action_result.service_id}. Undo/Rollback recommended.`);
   } else {
     recoveryBox.classList.add('hidden');
   }
@@ -759,15 +797,15 @@ async function triggerRollback() {
   if (!serviceId) return;
 
   try {
-    addTimelineEvent('action', `Initiating emergency rollback for ${serviceId}...`);
+    addTimelineEvent('action', `Initiating emergency undo for ${serviceId}...`);
     const res = await fetch(apiUrl('/api/rollback'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ service_id: serviceId })
     });
     const result = await res.json();
-    alert(`Rollback executed: ${result.service_id} restored to ${result.restored_instances} instances.`);
-    addTimelineEvent('action', `Rollback completed for ${serviceId}. Restored to ${result.restored_instances} instances.`);
+    alert(`Rollback executed: ${result.service_id} restored to ${result.restored_instances} servers.`);
+    addTimelineEvent('action', `Rollback completed for ${serviceId}. Restored to ${result.restored_instances} servers.`);
     await fetchServices();
     await fetchHistory();
     recoveryBox.classList.add('hidden');
@@ -786,7 +824,7 @@ function populateManualDropdown(services) {
 
   const prevVal = select.value;
   select.innerHTML = services.map(s => `
-    <option value="${s.service_id}">${s.service_id} (${s.instances} instances, $${s.cost_per_hour}/hr)</option>
+    <option value="${s.service_id}">${s.service_id} (${s.instances} servers, $${s.cost_per_hour}/hr)</option>
   `).join('');
 
   if (prevVal && services.find(s => s.service_id === prevVal)) {
@@ -811,9 +849,9 @@ function onManualServiceSelected() {
 
   document.getElementById('slider-instance-val').textContent = svc.instances;
   document.getElementById('slider-markers').innerHTML = `
-    <span>Min Bound: ${svc.min_instances}</span>
+    <span>Min Allowed: ${svc.min_instances}</span>
     <span>Current: ${svc.instances}</span>
-    <span>Max Bound: ${svc.max_instances}</span>
+    <span>Max Allowed: ${svc.max_instances}</span>
   `;
 
   // Evaluate current value immediately
@@ -849,23 +887,27 @@ function renderPreflightEvaluation(data, targetInstances) {
   const impact = document.getElementById('preflight-impact');
   const applyBtn = document.getElementById('btn-apply-manual');
 
-  badge.textContent = data.recommendation.replace('_', ' ');
+  let recText = data.recommendation.replace('_', ' ');
+  if (data.recommendation === 'RECOMMENDED') recText = 'RECOMMENDED (SAFE)';
+  if (data.recommendation === 'NOT_RECOMMENDED') recText = 'NOT RECOMMENDED (RISKY)';
+  if (data.recommendation === 'UNSAFE_BLOCKED') recText = 'BLOCKED BY SAFETY GUARD';
+
+  badge.textContent = recText;
   badge.className = `preflight-badge badge-${data.recommendation.toLowerCase().replace('_', '-')}`;
   reason.textContent = data.reason;
 
   if (data.projected_impact) {
-    impact.textContent = `Cost Delta: ${data.projected_impact.cost_delta ? (data.projected_impact.cost_delta < 0 ? `-$${Math.abs(data.projected_impact.cost_delta)}/hr` : `+$${data.projected_impact.cost_delta}/hr`) : '$0'} | Risk: ${data.projected_impact.latency_risk || 'N/A'}`;
+    impact.textContent = `Hourly Cost Change: ${data.projected_impact.cost_delta ? (data.projected_impact.cost_delta < 0 ? `-$${Math.abs(data.projected_impact.cost_delta)}/hr` : `+$${data.projected_impact.cost_delta}/hr`) : '$0'} | Speed Risk: ${data.projected_impact.latency_risk || 'N/A'}`;
   } else {
     impact.textContent = '';
   }
 
-  // Allow apply if safety is approved (even if NOT_RECOMMENDED, user can choose; but NOT if UNSAFE_BLOCKED)
   if (data.recommendation === 'UNSAFE_BLOCKED') {
     applyBtn.disabled = true;
-    applyBtn.textContent = 'Blocked by Safety Engine';
+    applyBtn.textContent = 'Blocked by Safety Guard';
   } else {
     applyBtn.disabled = false;
-    applyBtn.textContent = `Apply Change (${targetInstances} instances)`;
+    applyBtn.textContent = `Apply Change (${targetInstances} servers)`;
   }
 }
 
@@ -897,7 +939,7 @@ function renderMemoryList(records) {
   if (!container) return;
 
   if (!records || records.length === 0) {
-    container.innerHTML = '<div class="memory-empty">No previous optimizations recorded yet.</div>';
+    container.innerHTML = '<div class="memory-empty">No previous savings recorded yet.</div>';
     return;
   }
 
@@ -905,10 +947,10 @@ function renderMemoryList(records) {
     <div class="memory-item">
       <div class="memory-item-top">
         <span><strong>${r.service_id}</strong> (${r.action_type})</span>
-        <span style="color:${r.status === 'SUCCESS' ? 'var(--success)' : 'var(--danger)'};">${r.status}</span>
+        <span style="color:${r.status === 'SUCCESS' ? 'var(--success)' : 'var(--danger)'};">${r.status === 'SUCCESS' ? 'VERIFIED PASSED' : r.status}</span>
       </div>
       <div style="font-size:10px;font-family:var(--font-mono);color:var(--text-muted);">
-        Instances: ${r.instances_before} → ${r.instances_after} | Cost: $${r.cost_before} → $${r.cost_after}/hr
+        Servers: ${r.instances_before} → ${r.instances_after} | Spend: $${r.cost_before} → $${r.cost_after}/hr
       </div>
       <div class="memory-item-notes">${r.notes}</div>
     </div>
