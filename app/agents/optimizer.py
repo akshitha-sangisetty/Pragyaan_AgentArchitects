@@ -98,7 +98,8 @@ def recommend_action(
 
 def evaluate_manual_proposal(
     svc_investigation: ServiceInvestigation,
-    proposed_instances: int
+    proposed_instances: int,
+    user_goals: Optional[Dict[str, Any]] = None
 ) -> ManualProposalEvaluation:
     """
     Path B: Evaluates a manual slider adjustment proposed by the developer.
@@ -114,7 +115,8 @@ def evaluate_manual_proposal(
         action_type=action_type,
         target_instances=proposed_instances,
         is_fresh=svc_investigation.is_fresh,
-        current_rpm=effective_rpm
+        current_rpm=effective_rpm,
+        user_goals=user_goals
     )
 
     # If Safety Engine blocks it, mark UNSAFE_BLOCKED immediately

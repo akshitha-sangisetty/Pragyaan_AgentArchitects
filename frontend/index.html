@@ -8,6 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
   <div class="app-container">
@@ -67,6 +68,42 @@
       </div>
     </div>
 
+    <!-- Step 1: Goals & Operational Boundaries Bar -->
+    <div class="goals-bar">
+      <div class="goals-title">
+        <span class="goals-icon">🎯</span>
+        <span>Developer Boundaries (Step 1):</span>
+      </div>
+      <div class="goal-item">
+        <label for="goal-reduction">Cost Reduction Target:</label>
+        <div class="goal-input-wrap">
+          <input type="number" id="goal-reduction" value="25" min="5" max="90" onchange="saveGoals()">
+          <span>%</span>
+        </div>
+      </div>
+      <div class="goal-item">
+        <label for="goal-latency">Max Latency Boundary:</label>
+        <div class="goal-input-wrap">
+          <input type="number" id="goal-latency" value="300" min="50" max="2000" onchange="saveGoals()">
+          <span>ms</span>
+        </div>
+      </div>
+      <div class="goal-item">
+        <label for="goal-budget">Hourly Budget Cap:</label>
+        <div class="goal-input-wrap">
+          <span>$</span>
+          <input type="number" id="goal-budget" value="50" min="5" max="500" onchange="saveGoals()">
+          <span>/hr</span>
+        </div>
+      </div>
+      <div class="goal-item toggle-item">
+        <label>Live Monitoring:</label>
+        <button class="toggle-btn active" id="btn-monitoring-toggle" onclick="toggleMonitoring()">
+          <span class="toggle-dot"></span> ON
+        </button>
+      </div>
+    </div>
+
     <!-- Main Workspace Layout -->
     <main class="main-grid">
       
@@ -84,6 +121,15 @@
         <div class="services-container" id="services-list">
           <!-- Populated dynamically -->
           <div class="loading-spinner">Loading telemetry...</div>
+        </div>
+
+        <!-- Real-Time Telemetry & SLA Tracking Chart -->
+        <div class="chart-box">
+          <div class="chart-header">
+            <span>P95 Latency vs SLA Boundary</span>
+            <span class="chart-live-badge">● Live Telemetry</span>
+          </div>
+          <canvas id="telemetryChart" height="130"></canvas>
         </div>
       </section>
 
@@ -234,6 +280,18 @@
           <div class="memory-list" id="memory-list">
             <!-- Memory logs populated dynamically -->
             <div class="memory-empty">No previous actions recorded yet.</div>
+          </div>
+          
+          <!-- Phase 5: Export Audit Report -->
+          <div class="export-box">
+            <button class="secondary-btn" onclick="exportAuditReport('json')" title="Download full compliance audit log">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+              Export Audit Trail (JSON)
+            </button>
+            <button class="secondary-btn" onclick="exportAuditReport('csv')" title="Download CSV summary">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/></svg>
+              Export CSV
+            </button>
           </div>
         </div>
       </section>

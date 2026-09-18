@@ -18,7 +18,7 @@ from app.schemas import (
     ManualProposalEvaluation
 )
 from app.cloud_sim import get_service_state, execute_cloud_action
-from app.database import get_all_services, record_audit, get_optimization_history
+from app.database import get_all_services, record_audit, get_optimization_history, get_user_goals
 from app.agents.investigator import run_investigation
 from app.agents.optimizer import recommend_action, evaluate_manual_proposal
 from app.agents.verifier import verify_action_outcome
@@ -78,17 +78,21 @@ class WorkflowOrchestrator:
         action_results: List[ActionResult] = []
         verification_reports: List[VerificationReport] = []
 
+        # Fetch active user goals (Step 1 of P3)
+        user_goals = get_user_goals()
+
         for inv in investigation_report.services_investigated:
             proposal = recommend_action(inv, user_prompt=user_prompt)
             
-            # Deterministic Safety Check
+            # Deterministic Safety Check with User Goals enforcement
             effective_rpm = inv.fresh_traffic_pulled if inv.fresh_traffic_pulled else inv.current_state.requests_per_minute
             safety_result = validate_proposed_action(
                 service=inv.current_state,
                 action_type=proposal.action_type,
                 target_instances=proposal.target_instances,
                 is_fresh=inv.is_fresh,
-                current_rpm=effective_rpm
+                current_rpm=effective_rpm,
+                user_goals=user_goals
             )
 
             proposal_record = {
@@ -134,10 +138,15 @@ class WorkflowOrchestrator:
         if not svc:
             return {"error": f"Service {service_id} not found."}
 
+        user_goals = get_user_goals()
         inv_report = run_investigation([svc], user_prompt="Manual review")
         svc_inv = inv_report.services_investigated[0]
         
-        evaluation: ManualProposalEvaluation = evaluate_manual_proposal(svc_inv, target_instances)
+        evaluation: ManualProposalEvaluation = evaluate_manual_proposal(
+            svc_inv, 
+            target_instances, 
+            user_goals=user_goals
+        )
         return evaluation.model_dump()
 
     @staticmethod

@@ -5,7 +5,7 @@ Provides realistic metrics inspection, freshness calculation, and action executi
 
 from datetime import datetime, timezone
 import json
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from pathlib import Path
 from app.database import (
     get_service_by_id, 
@@ -181,3 +181,37 @@ def execute_cloud_action(service_id: str, action_type: str, target_instances: in
         error=None,
         applied_at=now_str
     )
+
+
+def simulate_telemetry_tick() -> List[Dict[str, Any]]:
+    """
+    Live Telemetry Ticking Engine.
+    Simulates real-world jitter (CPU +/-1.2%, latency +/-2ms, RPM +/-25)
+    to demonstrate live continuous monitoring on the dashboard.
+    """
+    import random
+    services = get_all_services()
+    updated = []
+    
+    for s in services:
+        sid = s["service_id"]
+        # Skip idle service with 0 RPM
+        if s["requests_per_minute"] == 0 and s["cpu_percent"] < 12.0:
+            updated.append(s)
+            continue
+            
+        jitter_cpu = round(max(5.0, min(95.0, s["cpu_percent"] + random.uniform(-1.5, 1.5))), 1)
+        jitter_rpm = max(0, int(s["requests_per_minute"] + random.randint(-30, 30)))
+        jitter_lat = round(max(10.0, min(s["max_latency_ms"] * 1.2, s["latency_ms"] + random.uniform(-3.0, 3.0))), 1)
+        
+        update_service_instances(
+            service_id=sid,
+            new_instances=s["instances"],
+            new_latency=jitter_lat,
+            new_cpu=jitter_cpu,
+            new_cost=s["cost_per_hour"]
+        )
+        updated.append(get_service_by_id(sid))
+        
+    return updated
+

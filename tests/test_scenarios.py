@@ -155,6 +155,62 @@ def test_deterministic_safety_engine_boundaries():
     assert any("unhealthy" in rule for rule in res_unhealthy.violated_rules)
 
 
+def test_user_goals_and_budget_cap_enforcement():
+    """
+    Tests developer-configured goals from Step 1 of P3:
+    1. Budget cap enforcement ($/hr) blocks excessive scale up.
+    2. Strict developer latency limit tighter than service default.
+    """
+    load_scenario("test_a")
+    svc = get_service_state("orders-api")  # 6 instances, $18.50/hr -> $3.08/instance
+
+    # Strict budget cap of $20/hr when scaling to 8 instances ($24.67/hr)
+    strict_budget_goals = {
+        "max_hourly_budget": 20.0,
+        "max_acceptable_latency_ms": 300.0
+    }
+    budget_check = validate_proposed_action(
+        svc, "scale_up", 8, user_goals=strict_budget_goals
+    )
+    assert budget_check.approved is False
+    assert any("budget cap" in rule for rule in budget_check.violated_rules)
+
+    # Tight latency threshold of 185ms (service default is 300ms, current latency is 180ms)
+    strict_latency_goals = {
+        "max_hourly_budget": 100.0,
+        "max_acceptable_latency_ms": 185.0
+    }
+    # Scaling down from 6 to 3 will push latency ~195ms, breaching the 185ms boundary!
+    latency_check = validate_proposed_action(
+        svc, "scale_down", 3, user_goals=strict_latency_goals
+    )
+    assert latency_check.approved is False
+    assert any("latency SLA boundary" in rule for rule in latency_check.violated_rules)
+
+
+def test_cooldown_anti_thrashing_guard():
+    """
+    Tests anti-thrashing cooldown protection:
+    If a service was modified recently, subsequent scale actions are guarded.
+    """
+    from datetime import datetime, timezone
+    load_scenario("test_a")
+    svc = get_service_state("reports-worker")
+
+    # Simulate recent action 30 seconds ago
+    recent_timestamp = datetime.now(timezone.utc).isoformat()
+    
+    cooldown_check = validate_proposed_action(
+        service=svc,
+        action_type="scale_down",
+        target_instances=1,
+        last_action_time=recent_timestamp,
+        cooldown_seconds=180
+    )
+    assert cooldown_check.approved is False
+    assert any("cooldown guard" in rule for rule in cooldown_check.violated_rules)
+
+
 def test_health_check():
     """Verify the /health endpoint used by Render uptime monitor."""
     from fastapi.testclient import TestClient
@@ -165,4 +221,6 @@ def test_health_check():
     data = response.json()
     assert data["status"] == "ok"
     assert "service" in data
+
+
 

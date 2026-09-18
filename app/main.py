@@ -17,10 +17,13 @@ from app.database import (
     load_scenario, 
     get_all_services, 
     get_optimization_history,
-    get_db_connection
+    get_db_connection,
+    get_user_goals,
+    update_user_goals
 )
+from app.schemas import UserGoals
 from app.workflow import WorkflowOrchestrator
-from app.cloud_sim import get_service_state, execute_cloud_action
+from app.cloud_sim import get_service_state, execute_cloud_action, simulate_telemetry_tick
 from app.agents.verifier import verify_action_outcome
 
 # Initialize FastAPI application
@@ -89,6 +92,24 @@ def health_check():
 def list_services():
     """Retrieve all current cloud services and metrics."""
     return get_all_services()
+
+
+@app.get("/api/goals")
+def get_goals_endpoint():
+    """Step 1 of P3: Retrieve developer goals and boundaries."""
+    return get_user_goals()
+
+
+@app.post("/api/goals")
+def update_goals_endpoint(goals: UserGoals):
+    """Step 1 of P3: Update developer goals and boundaries."""
+    return update_user_goals(goals.model_dump())
+
+
+@app.post("/api/telemetry/tick")
+def telemetry_tick_endpoint():
+    """Simulate real-time telemetry jitter for continuous live monitoring."""
+    return simulate_telemetry_tick()
 
 
 @app.post("/api/scenario/load")
