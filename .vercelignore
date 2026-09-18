@@ -1,0 +1,10 @@
+app/
+tests/
+data/
+*.py
+requirements.txt
+render.yaml
+runtime.txt
+Procfile
+pytest.ini
+*.db
