@@ -8,4 +8,4 @@
  * 1. The custom URL configured in the UI Settings modal (saved in browser localStorage)
  * 2. Or relative path (/api/...) if running locally or using Vercel rewrites.
  */
-window.API_BASE_URL = "";
+window.API_BASE_URL = "https://pragyaan-agent-backend.onrender.com";
