@@ -1,0 +1,121 @@
+{
+  "test_a": {
+    "id": "test_a",
+    "name": "Test A — Cost Optimization Request",
+    "description": "Review current services and reduce unnecessary cost without breaking latency or availability requirements.",
+    "prompt": "Review the current services and reduce unnecessary cost without breaking the latency or availability requirements.",
+    "current_time": "2026-09-17T10:30:00Z",
+    "services": [
+      {
+        "service_id": "orders-api",
+        "cpu_percent": 22.0,
+        "memory_percent": 41.0,
+        "requests_per_minute": 1200,
+        "latency_ms": 180.0,
+        "instances": 6,
+        "cost_per_hour": 18.50,
+        "min_instances": 2,
+        "max_instances": 8,
+        "max_latency_ms": 300.0,
+        "healthy": true,
+        "timestamp": "2026-09-17T10:30:00Z"
+      },
+      {
+        "service_id": "reports-worker",
+        "cpu_percent": 9.0,
+        "memory_percent": 15.0,
+        "requests_per_minute": 0,
+        "latency_ms": 0.0,
+        "instances": 4,
+        "cost_per_hour": 11.00,
+        "min_instances": 1,
+        "max_instances": 6,
+        "max_latency_ms": 900.0,
+        "healthy": true,
+        "timestamp": "2026-09-17T10:30:00Z"
+      }
+    ]
+  },
+  "test_b": {
+    "id": "test_b",
+    "name": "Test B — Rising Traffic",
+    "description": "Orders traffic is increasing rapidly. Keep the service within its latency target and avoid premature downscaling.",
+    "prompt": "Orders traffic is increasing. Keep the service within its latency target.",
+    "current_time": "2026-09-17T10:30:00Z",
+    "services": [
+      {
+        "service_id": "orders-api",
+        "cpu_percent": 28.0,
+        "memory_percent": 48.0,
+        "requests_per_minute": 4200,
+        "previous_requests_per_minute": 2100,
+        "latency_ms": 260.0,
+        "instances": 4,
+        "cost_per_hour": 18.50,
+        "min_instances": 2,
+        "max_instances": 8,
+        "max_latency_ms": 300.0,
+        "healthy": true,
+        "timestamp": "2026-09-17T10:30:00Z"
+      }
+    ]
+  },
+  "test_c": {
+    "id": "test_c",
+    "name": "Test C — Stale Observation",
+    "description": "Metrics are from 08:00 while current time is 10:30. System must detect stale timestamp and pull fresh traffic data before deciding.",
+    "prompt": "Reduce cost if it is safe.",
+    "current_time": "2026-09-17T10:30:00Z",
+    "services": [
+      {
+        "service_id": "checkout-api",
+        "cpu_percent": 24.0,
+        "memory_percent": 39.0,
+        "requests_per_minute": 900,
+        "latency_ms": 170.0,
+        "instances": 5,
+        "cost_per_hour": 20.00,
+        "min_instances": 2,
+        "max_instances": 8,
+        "max_latency_ms": 250.0,
+        "healthy": true,
+        "timestamp": "2026-09-17T08:00:00Z"
+      }
+    ],
+    "latest_traffic": {
+      "service_id": "checkout-api",
+      "requests_per_minute": 5200,
+      "timestamp": "2026-09-17T10:30:00Z"
+    }
+  },
+  "test_d": {
+    "id": "test_d",
+    "name": "Test D — Failed Action & Recovery",
+    "description": "High load on payment service requires scale up, but cloud infrastructure rejects action due to capacity unavailable. System must detect and recover.",
+    "prompt": "Scale the payment service only if the current state requires it.",
+    "current_time": "2026-09-17T10:30:00Z",
+    "services": [
+      {
+        "service_id": "payment-api",
+        "cpu_percent": 91.0,
+        "memory_percent": 82.0,
+        "requests_per_minute": 6400,
+        "latency_ms": 410.0,
+        "instances": 3,
+        "cost_per_hour": 22.00,
+        "min_instances": 2,
+        "max_instances": 8,
+        "max_latency_ms": 300.0,
+        "healthy": true,
+        "timestamp": "2026-09-17T10:30:00Z"
+      }
+    ],
+    "mock_action_result": {
+      "action_id": "act-784",
+      "action": "scale_up",
+      "requested_instances": 5,
+      "status": "failed",
+      "error": "capacity_unavailable"
+    }
+  }
+}

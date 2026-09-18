@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Autonomous Cloud Cost Optimization Engine</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Top Navigation & Scenario Bar -->
+    <header class="top-header">
+      <div class="brand-group">
+        <div class="brand-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/>
+            <path d="m13 13 3 3 5-5"/>
+          </svg>
+        </div>
+        <div>
+          <div class="brand-title">CLOUD GUARDIAN</div>
+          <div class="brand-subtitle">Autonomous Cost Optimization & Safety Gateway</div>
+        </div>
+      </div>
+
+      <!-- Hackathon Scenario Switcher -->
+      <div class="scenario-nav">
+        <span class="scenario-label">TEST SCENARIOS:</span>
+        <button class="scenario-btn active" id="btn-test-a" onclick="loadScenario('test_a')">
+          <span class="badge">A</span> Over-Provisioned
+        </button>
+        <button class="scenario-btn" id="btn-test-b" onclick="loadScenario('test_b')">
+          <span class="badge">B</span> Rising Traffic
+        </button>
+        <button class="scenario-btn" id="btn-test-c" onclick="loadScenario('test_c')">
+          <span class="badge">C</span> Stale Telemetry
+        </button>
+        <button class="scenario-btn" id="btn-test-d" onclick="loadScenario('test_d')">
+          <span class="badge">D</span> Action Failure
+        </button>
+      </div>
+
+      <div class="system-status">
+        <span class="status-dot pulse"></span>
+        <span id="system-clock">10:30:00 UTC</span>
+        <span class="pill-badge safety-pill">Safety Engine: ACTIVE</span>
+      </div>
+    </header>
+
+    <!-- Context Banner -->
+    <div class="context-banner" id="scenario-banner">
+      <div class="context-icon">💡</div>
+      <div class="context-details">
+        <div class="context-title" id="scenario-name">Test A — Cost Optimization Request</div>
+        <div class="context-desc" id="scenario-desc">Review current services and reduce unnecessary cost without breaking latency or availability requirements.</div>
+      </div>
+      <div class="context-prompt-box">
+        <span class="prompt-label">USER PROMPT:</span>
+        <span class="prompt-text" id="scenario-prompt">"Review the current services and reduce unnecessary cost without breaking the latency or availability requirements."</span>
+      </div>
+    </div>
+
+    <!-- Main Workspace Layout -->
+    <main class="main-grid">
+      
+      <!-- Column 1: Live Cloud Telemetry -->
+      <section class="panel telemetry-panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="8" x="2" y="2" rx="2" ry="2"/><rect width="20" height="8" x="2" y="14" rx="2" ry="2"/><line x1="6" x2="6.01" y1="6" y2="6"/><line x1="6" x2="6.01" y1="18" y2="18"/></svg>
+            Live Cloud Services
+          </div>
+          <button class="icon-btn" onclick="fetchServices()" title="Refresh telemetry">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 21h5v-5"/></svg>
+          </button>
+        </div>
+        <div class="services-container" id="services-list">
+          <!-- Populated dynamically -->
+          <div class="loading-spinner">Loading telemetry...</div>
+        </div>
+      </section>
+
+      <!-- Column 2: Dual Mode Execution Engine -->
+      <section class="panel control-panel">
+        <div class="tab-header">
+          <button class="tab-btn active" id="tab-path-a" onclick="switchTab('path-a')">
+            <span class="tab-icon">⚡</span> Path A: Autonomous Recommend
+          </button>
+          <button class="tab-btn" id="tab-path-b" onclick="switchTab('path-b')">
+            <span class="tab-icon">🎛️</span> Path B: Manual What-If Slider
+          </button>
+        </div>
+
+        <!-- TAB CONTENT: PATH A (Autonomous Pipeline) -->
+        <div class="tab-content active" id="content-path-a">
+          <div class="input-card">
+            <label class="input-label" for="prompt-input">Agent Goal / Operational Constraint:</label>
+            <div class="input-row">
+              <input type="text" id="prompt-input" class="text-input" value="Review the current services and reduce unnecessary cost without breaking the latency or availability requirements.">
+              <button class="primary-btn" id="btn-run-recommend" onclick="runRecommend()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                Recommend
+              </button>
+            </div>
+          </div>
+
+          <!-- Execution Flow / Agent DAG Visualization -->
+          <div class="pipeline-view" id="pipeline-view">
+            <div class="pipeline-placeholder" id="pipeline-placeholder">
+              <div class="empty-icon">🤖</div>
+              <div class="empty-text">Click <strong>Recommend</strong> to trigger the 3-Agent closed loop with deterministic safety verification.</div>
+            </div>
+
+            <div class="agent-cards-container hidden" id="agent-cards">
+              <!-- Dynamically filled with Agent 1, Agent 2, and Safety Engine results -->
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB CONTENT: PATH B (Manual Sliders) -->
+        <div class="tab-content" id="content-path-b">
+          <div class="manual-card">
+            <div class="manual-intro">
+              Manually adjust instance capacity. The <strong>Deterministic Safety Engine</strong> and <strong>Optimizer</strong> will evaluate your proposed change in real-time.
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="manual-service-select">Select Service to Adjust:</label>
+              <select id="manual-service-select" class="select-input" onchange="onManualServiceSelected()">
+                <!-- Populated dynamically -->
+              </select>
+            </div>
+
+            <div class="slider-box">
+              <div class="slider-header">
+                <span>Target Instances:</span>
+                <span class="slider-value" id="slider-instance-val">4</span>
+              </div>
+              <input type="range" id="instance-slider" class="range-slider" min="1" max="10" value="4" oninput="onSliderInput(this.value)">
+              <div class="slider-markers" id="slider-markers">
+                <span>Min: 1</span>
+                <span>Max: 8</span>
+              </div>
+            </div>
+
+            <!-- Instant Pre-Flight Evaluation Box -->
+            <div class="preflight-card" id="preflight-card">
+              <div class="preflight-header">
+                <span class="preflight-title">Pre-Flight Safety Verdict:</span>
+                <span class="preflight-badge" id="preflight-badge">EVALUATING</span>
+              </div>
+              <div class="preflight-reason" id="preflight-reason">
+                Adjust slider to test proposed change.
+              </div>
+              <div class="preflight-impact" id="preflight-impact">
+                <!-- Impact details -->
+              </div>
+            </div>
+
+            <div class="manual-actions">
+              <button class="primary-btn" id="btn-apply-manual" onclick="applyManualChange()" disabled>
+                Apply Changes to Cloud
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Column 3: Before vs After Verification & Historical Memory -->
+      <section class="panel verification-panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            Verification & Outcome
+          </div>
+        </div>
+
+        <!-- Before vs After Diff Container -->
+        <div class="diff-container" id="diff-container">
+          <div class="empty-diff-state" id="empty-diff">
+            <div class="empty-icon">📊</div>
+            <div>Apply an action to see real-time <strong>Before vs After</strong> verification and SLA checks.</div>
+          </div>
+
+          <div class="diff-card hidden" id="active-diff-card">
+            <div class="diff-card-header">
+              <span class="diff-service-id" id="diff-service-name">reports-worker</span>
+              <span class="pill-badge" id="diff-status-badge">SUCCESS</span>
+            </div>
+            
+            <table class="diff-table">
+              <thead>
+                <tr>
+                  <th>Metric</th>
+                  <th>Before</th>
+                  <th>After</th>
+                  <th>Change</th>
+                </tr>
+              </thead>
+              <tbody id="diff-table-body">
+                <!-- Dynamically populated -->
+              </tbody>
+            </table>
+
+            <div class="diff-summary-box" id="diff-summary-text">
+              Optimization successfully reduced hourly spend while preserving SLA and health.
+            </div>
+
+            <!-- Rollback Recovery Banner -->
+            <div class="recovery-box hidden" id="recovery-box">
+              <div class="recovery-alert">
+                <strong>⚠️ Degradation Detected:</strong> Latency increased beyond SLA.
+              </div>
+              <button class="rollback-btn" onclick="triggerRollback()">
+                ↺ Rollback to Previous State
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 9: Historical Optimization Memory -->
+        <div class="memory-section">
+          <div class="memory-header">
+            <span>🧠 Optimization Memory (Step 9)</span>
+            <span class="memory-sub">Past actions remembered</span>
+          </div>
+          <div class="memory-list" id="memory-list">
+            <!-- Memory logs populated dynamically -->
+            <div class="memory-empty">No previous actions recorded yet.</div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
