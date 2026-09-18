@@ -153,3 +153,16 @@ def test_deterministic_safety_engine_boundaries():
     res_unhealthy = validate_proposed_action(svc_unhealthy, "scale_down", 2)
     assert res_unhealthy.approved is False
     assert any("unhealthy" in rule for rule in res_unhealthy.violated_rules)
+
+
+def test_health_check():
+    """Verify the /health endpoint used by Render uptime monitor."""
+    from fastapi.testclient import TestClient
+    from app.main import app
+    client = TestClient(app)
+    response = client.get("/health")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "ok"
+    assert "service" in data
+

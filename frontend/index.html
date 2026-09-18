@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/styles.css">
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <div class="app-container">
@@ -46,6 +46,10 @@
       <div class="system-status">
         <span class="status-dot pulse"></span>
         <span id="system-clock">10:30:00 UTC</span>
+        <button class="backend-btn" id="backend-status-badge" onclick="openBackendConfigModal()" title="Click to configure Render Backend URL">
+          <span class="status-dot dot-online" id="backend-status-dot"></span>
+          <span>API: <span id="backend-status-url">Direct</span></span>
+        </button>
         <span class="pill-badge safety-pill">Safety Engine: ACTIVE</span>
       </div>
     </header>
@@ -237,6 +241,27 @@
     </main>
   </div>
 
-  <script src="/static/app.js"></script>
+  <!-- Backend Configuration Modal -->
+  <div id="backend-modal" class="modal-backdrop hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-title">⚙️ Backend Connection Settings</div>
+        <button class="modal-close-btn" onclick="closeBackendConfigModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p>Set your deployed <strong>Render</strong> backend URL below so this Vercel frontend can communicate with the backend API.</p>
+        <label for="backend-url-input" style="font-weight:600;color:var(--text-main);">Render Backend API URL:</label>
+        <input type="url" id="backend-url-input" class="modal-input" placeholder="https://pragyaan-agent-backend.onrender.com" />
+        <small style="color:var(--text-dim);line-height:1.4;">Leave empty to use relative paths (works locally or with Vercel rewrites). You can also configure this permanently in <code>frontend/config.js</code>.</small>
+      </div>
+      <div class="modal-actions">
+        <button class="action-btn btn-secondary" onclick="closeBackendConfigModal()">Cancel</button>
+        <button class="action-btn" onclick="saveBackendConfig()">Save & Connect</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
