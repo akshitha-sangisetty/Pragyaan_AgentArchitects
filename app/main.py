@@ -22,9 +22,12 @@ from app.database import (
     update_user_goals,
     get_active_provider,
     set_active_provider,
-    normalize_provider_name
+    normalize_provider_name,
+    load_uploaded_services
 )
 from app.schemas import (
+    UploadServicesRequest,
+    UploadedService,
     UserGoals, 
     AWSProviderInput, 
     AzureProviderInput, 
@@ -326,3 +329,17 @@ if FRONTEND_DIR.exists():
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)
+
+
+@app.post("/api/services/upload")
+def upload_services_endpoint(req: UploadServicesRequest):
+    try:
+        load_uploaded_services(req.services)
+        return {
+            "success": True,
+            "message": "Services uploaded successfully",
+            "serviceCount": len(req.services),
+            "services": [s.model_dump() for s in req.services]
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))

@@ -525,3 +525,31 @@ def update_user_goals(goals: Dict[str, Any]) -> Dict[str, Any]:
     finally:
         conn.close()
     return get_user_goals()
+
+
+def load_uploaded_services(services_data):
+    from datetime import datetime, timezone
+    import json
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM services")
+        for s in services_data:
+            cursor.execute('''
+                INSERT INTO services (
+                    service_id, cpu_percent, memory_percent, requests_per_minute,
+                    previous_requests_per_minute, latency_ms, instances, cost_per_hour,
+                    min_instances, max_instances, max_latency_ms, healthy, error_rate_percent, resource_size, timestamp,
+                    cloud_provider, resource_id, resource_type, region, provider_metadata_json
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                s.service_id, s.cpu_percent, s.memory_percent, s.requests_per_minute,
+                s.previous_requests_per_minute, s.latency_ms, s.instances, s.cost_per_hour,
+                s.min_instances, s.max_instances, s.max_latency_ms,
+                1 if s.healthy else 0, s.error_rate_percent,
+                s.resource_size, s.timestamp,
+                'AWS', f'i-{s.service_id[:8]}', 't3.medium', 'ap-south-1', '{}'
+            ))
+        conn.commit()
+    finally:
+        conn.close()

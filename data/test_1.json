@@ -1,0 +1,21 @@
+{
+  "services": [
+    {
+      "service_id": "test-api-1",
+      "resource_size": "Standard (2vCPU/4GB)",
+      "healthy": true,
+      "timestamp": "2026-09-17T10:30:00Z",
+      "cpu_percent": 15.0,
+      "memory_percent": 25.0,
+      "requests_per_minute": 500,
+      "previous_requests_per_minute": 500,
+      "latency_ms": 100.0,
+      "error_rate_percent": 0.05,
+      "instances": 3,
+      "cost_per_hour": 10.0,
+      "min_instances": 1,
+      "max_instances": 5,
+      "max_latency_ms": 300.0
+    }
+  ]
+}

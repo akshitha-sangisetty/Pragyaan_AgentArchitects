@@ -5,7 +5,7 @@ All provider models represent SIMULATED cloud environments (No real cloud creden
 """
 
 from typing import List, Optional, Literal, Dict, Any
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 # ==============================================================================
@@ -270,3 +270,33 @@ class OptimizationHistoryRecord(BaseModel):
     notes: str
     created_at: str
     cloud_provider: Optional[str] = Field("AWS", description="Cloud provider of optimization action")
+
+
+class UploadedService(BaseModel):
+    service_id: str
+    resource_size: str = "Standard (2vCPU/4GB)"
+    healthy: bool = True
+    timestamp: str
+
+    cpu_percent: float = Field(..., ge=0, le=100)
+    memory_percent: float = Field(..., ge=0, le=100)
+    requests_per_minute: int = Field(..., ge=0)
+    previous_requests_per_minute: int = Field(0, ge=0)
+    latency_ms: float = Field(..., ge=0)
+    error_rate_percent: float = Field(0.0, ge=0)
+
+    instances: int = Field(..., ge=1)
+    cost_per_hour: float = Field(..., ge=0)
+    min_instances: int = Field(..., ge=1)
+    max_instances: int = Field(..., ge=1)
+    max_latency_ms: float = Field(..., gt=0)
+
+    @model_validator(mode='after')
+    def validate_instances(self):
+        if not (self.min_instances <= self.instances <= self.max_instances):
+            raise ValueError(f"{self.service_id}.instances must be between min_instances and max_instances")
+        return self
+
+
+class UploadServicesRequest(BaseModel):
+    services: List[UploadedService]
