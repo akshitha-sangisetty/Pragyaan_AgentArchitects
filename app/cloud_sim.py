@@ -1,6 +1,7 @@
 """
-Simulated Cloud Environment & Tool APIs for Cloud Cost Optimization.
-Provides realistic metrics inspection, freshness calculation, and action execution.
+Simulated Multi-Cloud Environment & Tool APIs for Cloud Cost Optimization.
+Provides realistic metrics inspection, freshness calculation, and action execution for AWS, Azure, and GCP.
+ALL ACTIONS AND METRICS ARE PURELY SIMULATED.
 """
 
 from datetime import datetime, timezone
@@ -11,7 +12,8 @@ from app.database import (
     get_service_by_id, 
     update_service_instances, 
     get_all_services,
-    record_audit
+    record_audit,
+    get_active_provider
 )
 from app.schemas import ServiceState, ActionResult
 
@@ -19,7 +21,7 @@ SCENARIOS_PATH = Path(__file__).parent.parent / "data" / "scenarios.json"
 
 
 def get_service_state(service_id: str) -> Optional[ServiceState]:
-    """Fetch current state of a service."""
+    """Fetch current state of a service with multi-cloud metadata."""
     raw = get_service_by_id(service_id)
     if not raw:
         return None
@@ -28,7 +30,7 @@ def get_service_state(service_id: str) -> Optional[ServiceState]:
         cpu_percent=raw["cpu_percent"],
         memory_percent=raw["memory_percent"],
         requests_per_minute=raw["requests_per_minute"],
-        previous_requests_per_minute=raw["previous_requests_per_minute"],
+        previous_requests_per_minute=raw.get("previous_requests_per_minute"),
         latency_ms=raw["latency_ms"],
         instances=raw["instances"],
         cost_per_hour=raw["cost_per_hour"],
@@ -36,9 +38,14 @@ def get_service_state(service_id: str) -> Optional[ServiceState]:
         max_instances=raw["max_instances"],
         max_latency_ms=raw["max_latency_ms"],
         healthy=bool(raw["healthy"]),
-        error_rate_percent=float(raw["error_rate_percent"]) if "error_rate_percent" in raw.keys() else 0.1,
-        resource_size=str(raw["resource_size"]) if "resource_size" in raw.keys() else "Standard",
-        timestamp=raw["timestamp"]
+        error_rate_percent=float(raw.get("error_rate_percent", 0.1)),
+        resource_size=str(raw.get("resource_size", "Standard")),
+        timestamp=raw["timestamp"],
+        cloud_provider=raw.get("cloud_provider", "AWS"),
+        resource_id=raw.get("resource_id"),
+        resource_type=raw.get("resource_type"),
+        region=raw.get("region"),
+        provider_metadata=raw.get("provider_metadata", {})
     )
 
 
@@ -48,7 +55,6 @@ def check_freshness(observation_time_str: str, current_time_str: str = "2026-09-
     Returns {is_fresh: bool, age_minutes: float}.
     """
     try:
-        # Parse ISO strings (handling Z or +00:00)
         t_obs = datetime.fromisoformat(observation_time_str.replace("Z", "+00:00"))
         t_curr = datetime.fromisoformat(current_time_str.replace("Z", "+00:00"))
         delta_seconds = (t_curr - t_obs).total_seconds()
@@ -59,7 +65,6 @@ def check_freshness(observation_time_str: str, current_time_str: str = "2026-09-
             "age_minutes": round(age_minutes, 1)
         }
     except Exception:
-        # Fallback if parsing fails
         return {"is_fresh": True, "age_minutes": 0.0}
 
 
@@ -72,8 +77,14 @@ def get_latest_traffic(service_id: str) -> Optional[int]:
         with open(SCENARIOS_PATH, "r", encoding="utf-8") as f:
             scenarios = json.load(f)
         for _, sc in scenarios.items():
+            # Check root latest_traffic
             if "latest_traffic" in sc and sc["latest_traffic"].get("service_id") == service_id:
                 return sc["latest_traffic"]["requests_per_minute"]
+            # Check provider specific latest_traffic
+            if "providers" in sc:
+                for prov, pdata in sc["providers"].items():
+                    if "latest_traffic" in pdata and (pdata["latest_traffic"].get("service_name") == service_id or pdata["latest_traffic"].get("service_id") == service_id):
+                        return pdata["latest_traffic"].get("request_count", pdata["latest_traffic"].get("requests_per_minute"))
     except Exception:
         pass
     
@@ -84,12 +95,14 @@ def get_latest_traffic(service_id: str) -> Optional[int]:
 
 def execute_cloud_action(service_id: str, action_type: str, target_instances: int, simulate_failure: bool = False) -> ActionResult:
     """
-    Simulated Cloud Action API.
+    Simulated Multi-Cloud Action API.
     Executes scale_down, scale_up, resize, or stop_idle_service.
     Calculates realistic post-action telemetry (CPU load shift, latency impact, cost reduction).
     """
     now_str = datetime.now(timezone.utc).isoformat()
     raw = get_service_by_id(service_id)
+    active_prov = raw.get("cloud_provider", get_active_provider()) if raw else get_active_provider()
+    
     if not raw:
         return ActionResult(
             action_id=f"act-{int(datetime.now().timestamp())}",
@@ -99,28 +112,42 @@ def execute_cloud_action(service_id: str, action_type: str, target_instances: in
             applied_instances=0,
             status="failed",
             error="Service not found in cloud registry",
-            applied_at=now_str
+            applied_at=now_str,
+            cloud_provider=active_prov
         )
 
-    # Test D failure simulation: Check if service is payment-api with simulated failure
-    if simulate_failure or (service_id == "payment-api" and action_type == "scale_up"):
-        # Check scenario config if this is Test D
+    # Test D failure simulation: Check if service is under critical load with failure simulation
+    is_failed_service = service_id in ["payment-api", "billing-vmss", "transact-service"]
+    if simulate_failure or (is_failed_service and action_type == "scale_up"):
         try:
             with open(SCENARIOS_PATH, "r", encoding="utf-8") as f:
                 scenarios = json.load(f)
-            if "test_d" in scenarios and scenarios["test_d"].get("mock_action_result"):
-                mock_err = scenarios["test_d"]["mock_action_result"]
-                record_audit("ACTION_FAILED", {"service_id": service_id, "error": mock_err["error"]}, service_id)
-                return ActionResult(
-                    action_id=mock_err["action_id"],
-                    service_id=service_id,
-                    action_type=action_type,
-                    requested_instances=target_instances,
-                    applied_instances=raw["instances"],
-                    status="failed",
-                    error=mock_err["error"],
-                    applied_at=now_str
-                )
+            if "test_d" in scenarios:
+                test_d = scenarios["test_d"]
+                mock_err = None
+                if "providers" in test_d and active_prov in test_d["providers"] and "mock_action_result" in test_d["providers"][active_prov]:
+                    mock_err = test_d["providers"][active_prov]["mock_action_result"]
+                elif "mock_action_result" in test_d:
+                    mock_err = test_d["mock_action_result"]
+
+                if mock_err:
+                    record_audit(
+                        "ACTION_FAILED", 
+                        {"service_id": service_id, "error": mock_err["error"], "provider": active_prov}, 
+                        service_id,
+                        cloud_provider=active_prov
+                    )
+                    return ActionResult(
+                        action_id=mock_err["action_id"],
+                        service_id=service_id,
+                        action_type=action_type,
+                        requested_instances=target_instances,
+                        applied_instances=raw["instances"],
+                        status="failed",
+                        error=mock_err["error"],
+                        applied_at=now_str,
+                        cloud_provider=active_prov
+                    )
         except Exception:
             pass
 
@@ -183,12 +210,12 @@ def execute_cloud_action(service_id: str, action_type: str, target_instances: in
         new_instances, 
         new_latency, 
         new_cpu, 
-        new_cost,
+        new_cost, 
         new_error_rate=new_error_rate,
         new_resource_size=new_resource_size
     )
     
-    action_id = f"act-{int(datetime.now().timestamp())}"
+    action_id = f"act-{active_prov.lower()}-{int(datetime.now().timestamp())}"
     record_audit("ACTION_APPLIED", {
         "action_id": action_id,
         "service_id": service_id,
@@ -198,8 +225,9 @@ def execute_cloud_action(service_id: str, action_type: str, target_instances: in
         "cost_before": raw["cost_per_hour"],
         "cost_after": new_cost,
         "error_rate_before": old_err,
-        "error_rate_after": new_error_rate
-    }, service_id)
+        "error_rate_after": new_error_rate,
+        "cloud_provider": active_prov
+    }, service_id, cloud_provider=active_prov)
 
     return ActionResult(
         action_id=action_id,
@@ -209,13 +237,14 @@ def execute_cloud_action(service_id: str, action_type: str, target_instances: in
         applied_instances=new_instances,
         status="applied",
         error=None,
-        applied_at=now_str
+        applied_at=now_str,
+        cloud_provider=active_prov
     )
 
 
 def simulate_telemetry_tick() -> List[Dict[str, Any]]:
     """
-    Live Telemetry Ticking Engine.
+    Live Telemetry Ticking Engine for Multi-Cloud environment.
     Simulates real-world jitter (CPU +/-1.2%, latency +/-2ms, RPM +/-25)
     to demonstrate live continuous monitoring on the dashboard.
     """
@@ -247,4 +276,3 @@ def simulate_telemetry_tick() -> List[Dict[str, Any]]:
         updated.append(get_service_by_id(sid))
         
     return updated
-

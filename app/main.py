@@ -1,16 +1,16 @@
 """
 FastAPI Server for Autonomous Cloud Cost Optimization System.
-Provides REST and SSE endpoints for Mission Control UI and external integrations.
+Provides REST and SSE endpoints for Mission Control UI and Multi-Cloud integrations.
 """
 
 import os
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.database import (
     init_db, 
@@ -19,18 +19,28 @@ from app.database import (
     get_optimization_history,
     get_db_connection,
     get_user_goals,
-    update_user_goals
+    update_user_goals,
+    get_active_provider,
+    set_active_provider,
+    normalize_provider_name
 )
-from app.schemas import UserGoals
+from app.schemas import (
+    UserGoals, 
+    AWSProviderInput, 
+    AzureProviderInput, 
+    GCPProviderInput, 
+    CommonTelemetry
+)
+from app.adapters import normalize_provider_data, common_telemetry_to_service_state
 from app.workflow import WorkflowOrchestrator
 from app.cloud_sim import get_service_state, execute_cloud_action, simulate_telemetry_tick
 from app.agents.verifier import verify_action_outcome
 
 # Initialize FastAPI application
 app = FastAPI(
-    title="Autonomous Cloud Cost Optimization System",
-    description="Multi-agent closed-loop cloud cost optimization system with deterministic safety enforcement.",
-    version="1.0.0"
+    title="Cloud Guardian - Autonomous Multi-Cloud Cost Optimization System",
+    description="Multi-agent closed-loop cloud cost optimization system with multi-cloud support (AWS, Azure, GCP) and deterministic safety enforcement.",
+    version="2.0.0"
 )
 
 # CORS middleware for local development
@@ -45,15 +55,30 @@ app.add_middleware(
 FRONTEND_DIR = Path(__file__).parent.parent / "frontend"
 
 
+# ==============================================================================
 # Request / Response Schemas for API
+# ==============================================================================
+
 class ScenarioLoadRequest(BaseModel):
     scenario_id: str
+    provider: Optional[str] = None
+
+
+class ProviderSelectRequest(BaseModel):
+    provider: str = Field(..., description="Cloud provider (AWS, Azure, GCP)")
+    scenario_id: Optional[str] = Field("test_a", description="Scenario to load under new provider")
+
+
+class CloudTelemetryIngestRequest(BaseModel):
+    provider: str = Field(..., description="Provider name: AWS, Azure, GCP")
+    provider_data: Dict[str, Any] = Field(..., description="Raw provider-specific telemetry payload")
 
 
 class RecommendRequest(BaseModel):
     user_prompt: str = "Review services and optimize cost safely without breaking latency."
     auto_apply: bool = False
     target_service_id: Optional[str] = None
+    provider: Optional[str] = None
 
 
 class ManualEvaluateRequest(BaseModel):
@@ -75,22 +100,24 @@ class RollbackRequest(BaseModel):
 def startup_event():
     """Ensure database is initialized and seeded with default Test A scenario on launch."""
     init_db()
-    # If no services exist, load test_a by default
     existing = get_all_services()
     if not existing:
-        load_scenario("test_a")
+        load_scenario("test_a", "AWS")
 
 
-# API Endpoints
+# ==============================================================================
+# Core & Health Endpoints
+# ==============================================================================
+
 @app.get("/health")
 def health_check():
     """Health check endpoint for Render uptime monitoring."""
-    return {"status": "ok", "service": "pragyaan-agent-backend"}
+    return {"status": "ok", "service": "cloud-guardian-agent-backend", "version": "2.0.0"}
 
 
 @app.get("/api/services")
 def list_services():
-    """Retrieve all current cloud services and metrics."""
+    """Retrieve all current cloud services and metrics with provider attribution."""
     return get_all_services()
 
 
@@ -112,14 +139,72 @@ def telemetry_tick_endpoint():
     return simulate_telemetry_tick()
 
 
+# ==============================================================================
+# Multi-Cloud Endpoints (Parts C, D, H, P)
+# ==============================================================================
+
+@app.get("/api/cloud/providers")
+def get_cloud_providers():
+    """List supported cloud providers and the currently active selection."""
+    return {
+        "supported_providers": ["AWS", "Azure", "GCP"],
+        "active_provider": get_active_provider()
+    }
+
+
+@app.post("/api/cloud/provider/select")
+def select_cloud_provider(req: ProviderSelectRequest):
+    """
+    Switch active cloud provider (AWS, Azure, GCP) and load provider-specific simulated data.
+    """
+    prov = normalize_provider_name(req.provider)
+    if prov not in ["AWS", "Azure", "GCP"]:
+        raise HTTPException(status_code=400, detail=f"Invalid cloud provider '{req.provider}'. Allowed: AWS, Azure, GCP")
+
+    set_active_provider(prov)
+    scenario_id = req.scenario_id or "test_a"
+    scenario_data = load_scenario(scenario_id, prov)
+
+    return {
+        "status": "success",
+        "active_provider": prov,
+        "scenario_id": scenario_id,
+        "name": scenario_data["name"],
+        "services": get_all_services()
+    }
+
+
+@app.post("/api/cloud/telemetry")
+def ingest_cloud_telemetry(req: CloudTelemetryIngestRequest):
+    """
+    Ingests provider-specific raw telemetry (AWS, Azure, GCP),
+    validates the provider-specific schema, and normalizes it into CommonTelemetry.
+    """
+    try:
+        common_tel = normalize_provider_data(req.provider, req.provider_data)
+        return {
+            "status": "normalized",
+            "provider": common_tel.cloud_provider,
+            "normalized_telemetry": common_tel.model_dump()
+        }
+    except Exception as e:
+        raise HTTPException(status_code=422, detail=f"Normalization failed for {req.provider} payload: {str(e)}")
+
+
+# ==============================================================================
+# Scenario & Recommendation Endpoints
+# ==============================================================================
+
 @app.post("/api/scenario/load")
 def load_scenario_endpoint(req: ScenarioLoadRequest):
-    """Load an official hackathon test case (test_a, test_b, test_c, test_d)."""
+    """Load an official test scenario (test_a, test_b, test_c, test_d) for the active provider."""
     try:
-        data = load_scenario(req.scenario_id)
+        active_prov = req.provider or get_active_provider()
+        data = load_scenario(req.scenario_id, active_prov)
         return {
             "status": "success",
             "scenario": req.scenario_id,
+            "cloud_provider": active_prov,
             "name": data["name"],
             "description": data["description"],
             "prompt": data["prompt"],
@@ -135,6 +220,9 @@ def run_recommend_endpoint(req: RecommendRequest):
     Path A: Run autonomous 3-agent pipeline.
     Investigates state, produces action recommendations with reasoning and safety validation.
     """
+    if req.provider:
+        set_active_provider(req.provider)
+
     result = WorkflowOrchestrator.run_path_a_pipeline(
         user_prompt=req.user_prompt,
         auto_apply=req.auto_apply,
@@ -176,6 +264,7 @@ def apply_action_endpoint(req: ApplyActionRequest):
 
     return {
         "status": "applied" if action_res.status == "applied" else "failed",
+        "cloud_provider": before_state.cloud_provider or get_active_provider(),
         "action_result": action_res.model_dump(),
         "verification": verification.model_dump(),
         "before_state": before_state.model_dump(),
@@ -192,7 +281,7 @@ def rollback_endpoint(req: RollbackRequest):
 
 @app.get("/api/history")
 def get_history(service_id: Optional[str] = Query(None)):
-    """Retrieve optimization history and audit logs."""
+    """Retrieve optimization history and audit logs with cloud provider context."""
     history = get_optimization_history(service_id=service_id, limit=20)
     
     conn = get_db_connection()
@@ -207,7 +296,10 @@ def get_history(service_id: Optional[str] = Query(None)):
     }
 
 
+# ==============================================================================
 # Static Frontend Files Mount
+# ==============================================================================
+
 if FRONTEND_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
 

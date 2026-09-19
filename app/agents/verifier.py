@@ -1,13 +1,13 @@
 """
-Agent 3: Verifier Agent
+Agent 3: Verifier Agent (Multi-Cloud Aware)
 Answers the core question: "Did the change actually work?"
 
 Responsibilities:
-1. Compares Before vs After telemetry metrics.
+1. Compares Before vs After telemetry metrics across AWS, Azure, and GCP.
 2. Checks whether cost decreased and whether performance/health SLAs were maintained.
 3. Detects action failures or performance degradation.
 4. Initiates recovery / rollback recommendation if an SLA breach occurs.
-5. Emits records to be remembered in Step 9 optimization history.
+5. Emits records to be remembered in Step 9 optimization history with cloud provider attribution.
 """
 
 from typing import List, Dict, Any, Optional
@@ -28,13 +28,14 @@ def verify_action_outcome(
     action_result: ActionResult,
     objective: str = "Reduce cost without breaking performance or SLA"
 ) -> VerificationReport:
-    """Execute Agent 3 verification comparing before vs after state."""
+    """Execute Agent 3 verification comparing before vs after state with multi-cloud context."""
     service_id = before_state.service_id
-    now_id = f"ver-{int(datetime.now().timestamp())}"
+    prov = before_state.cloud_provider or action_result.cloud_provider or "AWS"
+    now_id = f"ver-{prov.lower()}-{int(datetime.now().timestamp())}"
 
-    # Handle Case 1: The cloud action failed to apply (Test D)
+    # Handle Case 1: The cloud action failed to execute (Test D)
     if action_result.status == "failed":
-        summary = f"Action '{action_result.action_type}' failed to execute: {action_result.error}."
+        summary = f"[{prov}] Action '{action_result.action_type}' failed to execute on {service_id}: {action_result.error}."
         save_optimization_history(
             service_id=service_id,
             action_type=action_result.action_type,
@@ -45,7 +46,8 @@ def verify_action_outcome(
             latency_before=before_state.latency_ms,
             latency_after=before_state.latency_ms,
             status="FAILED",
-            notes=f"Failed due to error: {action_result.error}"
+            notes=f"Failed on {prov} due to error: {action_result.error}",
+            cloud_provider=prov
         )
         return VerificationReport(
             verification_id=now_id,
@@ -56,10 +58,11 @@ def verify_action_outcome(
             comparisons=[],
             summary=summary,
             recovery_recommended=True,
-            recovery_action="Fallback to alternative scaling strategy or request capacity in alternate availability zone."
+            recovery_action=f"Fallback to alternative scaling strategy in alternate {prov} availability zone/region.",
+            cloud_provider=prov
         )
 
-    # Case 2: Fetch fresh post-action state from the cloud environment
+    # Case 2: Fetch fresh post-action state from the simulated cloud environment
     after_state = get_service_state(service_id)
     if not after_state:
         after_state = before_state
@@ -115,27 +118,27 @@ def verify_action_outcome(
     if not sla_maintained or after_state.latency_ms > after_state.max_latency_ms:
         status = "DEGRADED"
         summary = (
-            f"Optimization caused performance degradation! Latency increased to {after_state.latency_ms} ms, "
+            f"[{prov}] Optimization caused performance degradation! Latency increased to {after_state.latency_ms} ms, "
             f"breaching the {after_state.max_latency_ms} ms SLA limit. Immediate rollback recommended."
         )
         recovery_rec = True
-        recovery_act = f"Rollback instances from {after_state.instances} back to {before_state.instances}."
+        recovery_act = f"Rollback {prov} capacity from {after_state.instances} back to {before_state.instances} instances."
     elif cost_reduced:
         status = "SUCCESS"
         savings = round(before_state.cost_per_hour - after_state.cost_per_hour, 2)
         summary = (
-            f"Optimization successful. Reduced hourly spend by ${savings}/hr "
+            f"[{prov}] Optimization successful. Reduced hourly spend by ${savings}/hr "
             f"while preserving latency ({after_state.latency_ms} ms <= {after_state.max_latency_ms} ms SLA) and service health."
         )
         recovery_rec = False
         recovery_act = None
     else:
         status = "SUCCESS"
-        summary = f"Capacity adjusted from {before_state.instances} to {after_state.instances} instances with performance stable."
+        summary = f"[{prov}] Capacity adjusted from {before_state.instances} to {after_state.instances} instances with performance stable."
         recovery_rec = False
         recovery_act = None
 
-    # Save to SQLite optimization history (Step 9 memory)
+    # Save to SQLite optimization history with provider tracking (Step 9 memory)
     save_optimization_history(
         service_id=service_id,
         action_type=action_result.action_type,
@@ -146,7 +149,8 @@ def verify_action_outcome(
         latency_before=before_state.latency_ms,
         latency_after=after_state.latency_ms,
         status=status,
-        notes=summary
+        notes=summary,
+        cloud_provider=prov
     )
 
     return VerificationReport(
@@ -158,5 +162,6 @@ def verify_action_outcome(
         comparisons=comparisons,
         summary=summary,
         recovery_recommended=recovery_rec,
-        recovery_action=recovery_act
+        recovery_action=recovery_act,
+        cloud_provider=prov
     )

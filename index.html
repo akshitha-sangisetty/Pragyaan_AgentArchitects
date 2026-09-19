@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cloud Guardian - Smart Cloud Cost & Safety Manager</title>
+  <title>Cloud Guardian - Multi-Cloud Autonomous Cost & Safety Manager</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -13,7 +13,7 @@
 <body>
   <div class="app-container">
 
-    <!-- SECTION 1: GLOBAL HEADER -->
+    <!-- SECTION 1: GLOBAL HEADER & CLOUD PROVIDER SELECTOR -->
     <header class="top-header">
       <div class="brand-group">
         <div class="brand-icon">
@@ -24,24 +24,40 @@
         </div>
         <div>
           <div class="brand-title">CLOUD GUARDIAN</div>
-          <div class="brand-subtitle">Smart Cloud Cost & Safety Manager (Autonomous AI Control)</div>
+          <div class="brand-subtitle">Multi-Cloud Autonomous Cost & Safety Manager (AWS / Azure / GCP)</div>
+        </div>
+      </div>
+
+      <!-- Cloud Provider Selector (Part D) -->
+      <div class="provider-selector-wrap">
+        <span class="provider-label">CLOUD PROVIDER:</span>
+        <div class="provider-btn-group">
+          <button class="provider-toggle-btn active" id="btn-provider-aws" onclick="setCloudProvider('AWS')">
+            <span class="provider-icon">🟠</span> AWS
+          </button>
+          <button class="provider-toggle-btn" id="btn-provider-azure" onclick="setCloudProvider('Azure')">
+            <span class="provider-icon">🔵</span> Azure
+          </button>
+          <button class="provider-toggle-btn" id="btn-provider-gcp" onclick="setCloudProvider('GCP')">
+            <span class="provider-icon">🟢</span> GCP
+          </button>
         </div>
       </div>
 
       <!-- SECTION 2: TEST SCENARIOS SWITCHER -->
       <div class="scenario-nav">
-        <span class="scenario-label">DEMO SCENARIOS:</span>
+        <span class="scenario-label">SCENARIO:</span>
         <button class="scenario-btn active" id="btn-test-a" onclick="loadScenario('test_a')">
-          <span class="badge">A</span> Wasted Money (Over-Provisioned)
+          <span class="badge">A</span> Over-Provisioned
         </button>
         <button class="scenario-btn" id="btn-test-b" onclick="loadScenario('test_b')">
-          <span class="badge">B</span> High Traffic (Scale Up)
+          <span class="badge">B</span> High Traffic
         </button>
         <button class="scenario-btn" id="btn-test-c" onclick="loadScenario('test_c')">
-          <span class="badge">C</span> Old Data (Safety Block)
+          <span class="badge">C</span> Stale Data
         </button>
         <button class="scenario-btn" id="btn-test-d" onclick="loadScenario('test_d')">
-          <span class="badge">D</span> Risky Action (Safety Block)
+          <span class="badge">D</span> Failed Action
         </button>
       </div>
 
@@ -50,15 +66,15 @@
         <span id="system-clock">--:--:-- UTC</span>
         <button class="backend-btn" id="backend-status-badge" onclick="openBackendConfigModal()" title="Click to configure Render Backend URL">
           <span class="status-dot dot-online" id="backend-status-dot"></span>
-          <span>System API: <span id="backend-status-url">Direct</span></span>
+          <span>API: <span id="backend-status-url">Direct</span></span>
         </button>
-        <span class="pill-badge safety-pill">Safety Guard: ACTIVE</span>
+        <span class="pill-badge safety-pill" id="active-provider-pill">AWS (Simulated)</span>
       </div>
     </header>
 
     <!-- Context Banner -->
     <div class="context-banner" id="scenario-banner">
-      <div class="context-icon">⚡</div>
+      <div class="context-icon" id="provider-context-icon">⚡</div>
       <div class="context-details">
         <div class="context-title" id="scenario-name">Scenario A — Wasted Money (Over-Provisioned)</div>
         <div class="context-desc" id="scenario-desc">Review current servers and reduce unnecessary spend without slowing down the website or breaking safety limits.</div>
@@ -117,7 +133,7 @@
       <div class="section-header">
         <div class="section-title">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="8" x="2" y="2" rx="2" ry="2"/><rect width="20" height="8" x="2" y="14" rx="2" ry="2"/><line x1="6" x2="6.01" y1="6" y2="6"/><line x1="6" x2="6.01" y1="18" y2="18"/></svg>
-          1. Active Cloud Services & Live Server Health
+          1. Active Cloud Services & Live Provider Telemetry (<span id="telemetry-provider-label">AWS</span>)
         </div>
         <button class="icon-btn" onclick="fetchServices()" title="Refresh live server data">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 21h5v-5"/></svg>
@@ -131,8 +147,8 @@
 
         <div class="chart-box">
           <div class="chart-header">
-            <span>Website Speed vs Allowed Safety Limit</span>
-            <span class="chart-live-badge">● Live Metrics</span>
+            <span>Response Latency vs SLA Limit</span>
+            <span class="chart-live-badge">● Live Telemetry</span>
           </div>
           <div class="chart-canvas-container">
             <canvas id="telemetryChart"></canvas>
@@ -162,7 +178,17 @@
       <div class="tab-content active" id="content-path-a">
         <!-- User Request Goal Input Bar -->
         <div class="input-card">
-          <label class="input-label" for="prompt-input">Instructions for AI Agents:</label>
+          <div class="input-header-row">
+            <label class="input-label" for="prompt-input">Instructions for AI Agents:</label>
+            <div class="preset-pills-wrap">
+              <span class="preset-label">Quick Prompts:</span>
+              <button class="preset-pill" onclick="applyPresetPrompt('Investigate why the cloud cost is increasing.')">Cost Drivers</button>
+              <button class="preset-pill" onclick="applyPresetPrompt('Check whether the service is over-provisioned.')">Over-Provisioning</button>
+              <button class="preset-pill" onclick="applyPresetPrompt('Focus on latency before recommending any scaling action.')">Latency First</button>
+              <button class="preset-pill" onclick="applyPresetPrompt('Find the most expensive resource.')">Highest Spend</button>
+              <button class="preset-pill" onclick="applyPresetPrompt('Determine whether scaling down is safe.')">Safety Check</button>
+            </div>
+          </div>
           <div class="input-row">
             <input type="text" id="prompt-input" class="text-input" value="Review the current services and reduce unnecessary cost without breaking the latency or availability requirements.">
             <button class="primary-btn" id="btn-run-recommend" onclick="runRecommend()">
@@ -364,7 +390,7 @@
       </div>
     </section>
 
-    <!-- SECTION 7: AUDIT TRAIL & OPTIMIZATION MEMORY -->
+    <!-- SECTION 8: AUDIT TRAIL & OPTIMIZATION MEMORY -->
     <section class="section-container grid-two-col">
       <!-- Left: Optimization Activity Timeline -->
       <div class="sub-panel">
