@@ -20,6 +20,8 @@ class ServiceState(BaseModel):
     max_instances: int = Field(..., description="Maximum permitted instances (hard bound)")
     max_latency_ms: float = Field(..., description="Maximum allowed latency SLA in ms")
     healthy: bool = Field(True, description="Service health check status")
+    error_rate_percent: float = Field(0.1, description="Current error rate percentage (e.g. 0.1%)")
+    resource_size: str = Field("Standard", description="Instance tier sizing (e.g. Standard, Small, Large)")
     timestamp: str = Field(..., description="Observation ISO timestamp (e.g. 2026-09-17T10:30:00Z)")
 
 
@@ -27,6 +29,7 @@ class UserGoals(BaseModel):
     """Developer-defined goals and boundaries from Step 1 of P3."""
     target_cost_reduction_percent: float = Field(25.0, description="Target reduction percentage (e.g. 25%)")
     max_acceptable_latency_ms: float = Field(300.0, description="Global maximum acceptable latency SLA")
+    default_min_instances: int = Field(1, description="Global minimum instance capacity limit")
     max_hourly_budget: float = Field(50.0, description="Maximum allowable total hourly cloud spend")
     monitoring_enabled: bool = Field(True, description="Live continuous monitoring toggle")
 

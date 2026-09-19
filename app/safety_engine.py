@@ -56,7 +56,7 @@ def validate_proposed_action(
         violations.append("Service is currently unhealthy. Remediation required before cost optimization.")
 
     # 3. Min instances check
-    if action_type == "scale_down":
+    if action_type in ["scale_down", "stop_idle_service"]:
         if target_instances < service.min_instances:
             violations.append(
                 f"Requested instances ({target_instances}) is below configured minimum capacity ({service.min_instances})."

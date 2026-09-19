@@ -18,6 +18,8 @@
         "max_instances": 8,
         "max_latency_ms": 300.0,
         "healthy": true,
+        "error_rate_percent": 0.08,
+        "resource_size": "Standard (2vCPU/4GB)",
         "timestamp": "2026-09-17T10:30:00Z"
       },
       {
@@ -32,6 +34,8 @@
         "max_instances": 6,
         "max_latency_ms": 900.0,
         "healthy": true,
+        "error_rate_percent": 0.0,
+        "resource_size": "Standard (2vCPU/4GB)",
         "timestamp": "2026-09-17T10:30:00Z"
       }
     ]
@@ -56,6 +60,8 @@
         "max_instances": 8,
         "max_latency_ms": 300.0,
         "healthy": true,
+        "error_rate_percent": 0.12,
+        "resource_size": "Standard (2vCPU/4GB)",
         "timestamp": "2026-09-17T10:30:00Z"
       }
     ]
@@ -79,6 +85,8 @@
         "max_instances": 8,
         "max_latency_ms": 250.0,
         "healthy": true,
+        "error_rate_percent": 0.05,
+        "resource_size": "Standard (2vCPU/4GB)",
         "timestamp": "2026-09-17T08:00:00Z"
       }
     ],
@@ -107,6 +115,8 @@
         "max_instances": 8,
         "max_latency_ms": 300.0,
         "healthy": true,
+        "error_rate_percent": 1.85,
+        "resource_size": "Standard (2vCPU/4GB)",
         "timestamp": "2026-09-17T10:30:00Z"
       }
     ],

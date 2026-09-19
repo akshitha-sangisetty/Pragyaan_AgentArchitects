@@ -75,7 +75,8 @@ def recommend_action(
         "You are the Optimizer Agent for cloud infrastructure. "
         "Recommend safe, cost-effective infrastructure adjustments. "
         "Never scale down services experiencing rising traffic or stale metrics. "
-        "Respect SLA limits strictly."
+        "Respect SLA limits strictly. "
+        "For idle services, scale down to min_instances. Never propose target_instances below min_instances."
     )
 
     llm_response = llm_client.generate_json(prompt, system_prompt)
@@ -83,11 +84,19 @@ def recommend_action(
     if llm_response.get("_mode") == "deterministic_demo_fallback" or "action_type" not in llm_response:
         return _deterministic_recommendation(investigation, memory_note)
 
+    target_instances = int(llm_response.get("target_instances", svc.instances))
+    action_type = str(llm_response.get("action_type", "no_action"))
+
+    if target_instances < svc.min_instances:
+        target_instances = svc.min_instances
+        if action_type in ["stop_idle_service", "scale_down"] and target_instances > 0:
+            action_type = "scale_down"
+
     return ActionProposal(
         service_id=svc.service_id,
-        action_type=llm_response["action_type"],
+        action_type=action_type,
         current_instances=svc.instances,
-        target_instances=llm_response["target_instances"],
+        target_instances=target_instances,
         reason=llm_response["reason"],
         projected_cost_delta_per_hr=float(llm_response.get("projected_cost_delta_per_hr", 0.0)),
         projected_latency_impact=str(llm_response.get("projected_latency_impact", "None")),

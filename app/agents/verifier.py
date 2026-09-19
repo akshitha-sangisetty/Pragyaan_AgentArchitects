@@ -97,6 +97,14 @@ def verify_action_outcome(
             unit="%",
             change_percent=round(((after_state.cpu_percent - before_state.cpu_percent) / max(1.0, before_state.cpu_percent)) * 100, 1),
             improved=after_state.cpu_percent <= 80.0
+        ),
+        MetricComparison(
+            metric_name="Errors",
+            before=before_state.error_rate_percent,
+            after=after_state.error_rate_percent,
+            unit="%",
+            change_percent=round(((after_state.error_rate_percent - before_state.error_rate_percent) / max(0.01, before_state.error_rate_percent)) * 100, 1),
+            improved=after_state.error_rate_percent <= 1.0
         )
     ]
 
