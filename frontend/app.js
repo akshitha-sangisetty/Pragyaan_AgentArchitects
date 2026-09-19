@@ -23,9 +23,6 @@ let auditTimelineEvents = [];
 // ==========================================================================
 
 function getApiBaseUrl() {
-  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-    return '';
-  }
   const custom = localStorage.getItem('API_BASE_URL');
   if (custom && custom.trim() !== '') {
     return custom.trim().replace(/\/+$/, '');
