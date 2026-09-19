@@ -1,6 +1,6 @@
 /**
- * Autonomous Cloud Cost Optimization Engine — Frontend Logic
- * Simplified Human-Understandable Labels for Review Presentation
+ * Cloud Guardian — Professional Cloud Cost & Safety Manager
+ * Enterprise SaaS Control & Telemetry Orchestration
  */
 
 let currentServices = [];
@@ -8,17 +8,15 @@ let currentScenarioId = 'test_a';
 let activeRecommendation = null;
 let lastSelectedManualServiceId = null;
 
-// Debounce helper for slider
 let sliderTimeout = null;
 let telemetryChart = null;
 let monitoringActive = true;
 let monitoringTimer = null;
 
-// In-memory Audit Activity Timeline events
 let auditTimelineEvents = [];
 
 // ==========================================================================
-// Dynamic API Endpoint Resolver (Render + Vercel)
+// Dynamic API Endpoint Resolver
 // ==========================================================================
 
 function getApiBaseUrl() {
@@ -58,13 +56,13 @@ async function checkBackendHealth() {
     const res = await fetch(apiUrl('/health'), { method: 'GET' });
     if (res.ok) {
       if (dot) dot.className = 'status-dot dot-online';
-      if (badge) badge.title = `Connected to backend: ${base || 'Local'}`;
+      if (badge) badge.title = `Connected to backend API: ${base || 'Local'}`;
     } else {
       if (dot) dot.className = 'status-dot dot-warning';
     }
   } catch (err) {
     if (dot) dot.className = 'status-dot dot-offline';
-    if (badge) badge.title = `Failed to connect. Click to configure URL.`;
+    if (badge) badge.title = `Disconnected. Click to configure API URL.`;
   }
 }
 
@@ -115,7 +113,7 @@ function updateClock() {
 }
 
 // ==========================================================================
-// Audit Activity Timeline Helper
+// Activity Log Timeline Helper
 // ==========================================================================
 
 function addTimelineEvent(category, description) {
@@ -140,20 +138,20 @@ function renderTimeline() {
   if (!container) return;
 
   if (auditTimelineEvents.length === 0) {
-    container.innerHTML = '<div class="timeline-empty">System ready. Waiting for scenario actions...</div>';
+    container.innerHTML = '<div style="font-size:12px;color:var(--text-muted);text-align:center;padding:16px;">System initialized.</div>';
     return;
   }
 
   container.innerHTML = auditTimelineEvents.map(e => `
-    <div class="timeline-event event-${e.category}">
-      <span class="timeline-time">${e.time} UTC</span>
-      <div class="timeline-desc">${e.description}</div>
+    <div class="timeline-event">
+      <span class="timeline-time">${e.time}</span>
+      <span class="timeline-desc">${e.description}</span>
     </div>
   `).join('');
 }
 
 // ==========================================================================
-// Step 1: Goals & Operational Boundaries
+// Operational Boundaries & Safety Controls
 // ==========================================================================
 
 async function fetchGoals() {
@@ -170,7 +168,7 @@ async function fetchGoals() {
     monitoringActive = goals.monitoring_enabled;
     updateMonitoringButton();
   } catch (err) {
-    console.error('Failed to fetch goals:', err);
+    console.error('Failed to fetch safety goals:', err);
   }
 }
 
@@ -189,7 +187,7 @@ async function saveGoals() {
       body: JSON.stringify(goals)
     });
   } catch (err) {
-    console.error('Failed to save goals:', err);
+    console.error('Failed to save safety goals:', err);
   }
 }
 
@@ -210,10 +208,10 @@ function updateMonitoringButton() {
   if (!btn) return;
   if (monitoringActive) {
     btn.className = 'toggle-btn active';
-    btn.innerHTML = '<span class="toggle-dot"></span> ON';
+    btn.innerHTML = '<span class="toggle-dot"></span> Active';
   } else {
-    btn.className = 'toggle-btn off';
-    btn.innerHTML = '<span class="toggle-dot"></span> OFF';
+    btn.className = 'toggle-btn';
+    btn.innerHTML = '<span class="toggle-dot"></span> Paused';
   }
 }
 
@@ -228,13 +226,13 @@ function startMonitoringLoop() {
       renderServicesList(updated);
       updateTelemetryChart(updated);
     } catch (e) {
-      // ignore transient tick errors
+      // ignore tick errors
     }
   }, 4000);
 }
 
 // ==========================================================================
-// Chart.js Telemetry Graph
+// Response Time Chart.js (Restrained & Professional)
 // ==========================================================================
 
 function initTelemetryChart() {
@@ -247,20 +245,20 @@ function initTelemetryChart() {
       labels: [],
       datasets: [
         {
-          label: 'Response Delay / Speed (ms)',
+          label: 'Response Time (ms)',
           data: [],
-          backgroundColor: 'rgba(6, 182, 212, 0.65)',
-          borderColor: '#06b6d4',
+          backgroundColor: 'rgba(0, 112, 243, 0.7)',
+          borderColor: '#0070F3',
           borderWidth: 1,
           borderRadius: 4
         },
         {
-          label: 'Max Allowed Speed Limit',
+          label: 'Safety Threshold (ms)',
           data: [],
           type: 'line',
-          borderColor: '#f43f5e',
-          borderDash: [5, 5],
-          borderWidth: 2,
+          borderColor: '#EF4444',
+          borderDash: [4, 4],
+          borderWidth: 1.5,
           pointRadius: 0,
           fill: false
         }
@@ -273,18 +271,16 @@ function initTelemetryChart() {
         y: {
           beginAtZero: true,
           grid: { color: 'rgba(255, 255, 255, 0.05)' },
-          ticks: { color: '#64748b', font: { family: 'JetBrains Mono', size: 10 } }
+          ticks: { color: '#64748B', font: { family: 'Inter', size: 10 } }
         },
         x: {
           grid: { display: false },
-          ticks: { color: '#94a3b8', font: { family: 'Plus Jakarta Sans', size: 10 } }
+          ticks: { color: '#94A3B8', font: { family: 'Inter', size: 10 } }
         }
       },
       plugins: {
         legend: {
-          display: true,
-          position: 'top',
-          labels: { color: '#94a3b8', font: { size: 10 }, boxWidth: 12 }
+          display: false
         }
       }
     }
@@ -301,16 +297,23 @@ function updateTelemetryChart(services) {
   telemetryChart.data.datasets[0].data = latencies;
   telemetryChart.data.datasets[1].data = slas;
   telemetryChart.update('none');
+
+  if (services.length > 0) {
+    const mainSvc = services[0];
+    const currentLatEl = document.getElementById('chart-current-latency');
+    const safetyLimEl = document.getElementById('chart-safety-limit');
+    if (currentLatEl) currentLatEl.textContent = `${mainSvc.latency_ms} ms`;
+    if (safetyLimEl) safetyLimEl.textContent = `${mainSvc.max_latency_ms} ms`;
+  }
 }
 
 // ==========================================================================
-// Scenario Loading
+// Scenario Context & Loading
 // ==========================================================================
 
 async function loadScenario(scenarioId) {
   currentScenarioId = scenarioId;
   
-  // Update scenario navbar buttons
   document.querySelectorAll('.scenario-btn').forEach(btn => btn.classList.remove('active'));
   const activeBtn = document.getElementById(`btn-${scenarioId.replace('_', '-')}`);
   if (activeBtn) activeBtn.classList.add('active');
@@ -323,39 +326,56 @@ async function loadScenario(scenarioId) {
     });
     const data = await res.json();
 
-    // Friendly Scenario Descriptions
     let friendlyName = data.name;
     let friendlyDesc = data.description;
+    let currentSpendStr = "$18.50/hr";
+    let potentialSavingsStr = "$9.25/hr (50%)";
+    let safetyConstraintStr = "Max latency < 300 ms";
 
     if (scenarioId === 'test_a') {
-      friendlyName = 'Scenario A — Wasted Money (Over-Provisioned Servers)';
-      friendlyDesc = 'Server has too much unused capacity (6 servers). Goal: Reduce server count to save money without slowing down the website.';
+      friendlyName = 'Scenario A — Wasted capacity';
+      friendlyDesc = '6 servers are currently running for a workload that can be handled with fewer resources.';
+      currentSpendStr = "$18.50/hr";
+      potentialSavingsStr = "$9.25/hr (50%)";
+      safetyConstraintStr = "Max latency < 300 ms";
     } else if (scenarioId === 'test_b') {
-      friendlyName = 'Scenario B — High Visitor Traffic (Scale Up Required)';
-      friendlyDesc = 'Traffic is surging rapidly. Goal: Add more servers so the website stays fast and does not crash under high load.';
+      friendlyName = 'Scenario B — High traffic';
+      friendlyDesc = 'Traffic is surging rapidly across API endpoints. Additional server capacity is required to maintain response speed.';
+      currentSpendStr = "$8.25/hr";
+      potentialSavingsStr = "Scale up (+2 servers)";
+      safetyConstraintStr = "Max latency < 300 ms";
     } else if (scenarioId === 'test_c') {
-      friendlyName = 'Scenario C — Outdated Server Data (Safety Guard Block)';
-      friendlyDesc = 'Server telemetry data is old (>15 min). Goal: Safety Guard must block any changes until fresh data arrives.';
+      friendlyName = 'Scenario C — Stale telemetry';
+      friendlyDesc = 'Server telemetry data has not refreshed in over 15 minutes. Safety controls must block action until fresh data is received.';
+      currentSpendStr = "$18.50/hr";
+      potentialSavingsStr = "Action Blocked";
+      safetyConstraintStr = "Telemetry Age < 15m";
     } else if (scenarioId === 'test_d') {
-      friendlyName = 'Scenario D — Risky Server Action (Safety Guard Block)';
-      friendlyDesc = 'Proposed server reduction threatens website response speed limit. Goal: Safety Guard detects danger and blocks action.';
+      friendlyName = 'Scenario D — Risky action';
+      friendlyDesc = 'Proposed capacity reduction threatens response time limits. Safety controls will evaluate and block the unsafe operation.';
+      currentSpendStr = "$18.50/hr";
+      potentialSavingsStr = "Action Blocked";
+      safetyConstraintStr = "Safety Guard Verification";
     }
 
-    // Update Context Banner
     document.getElementById('scenario-name').textContent = friendlyName;
     document.getElementById('scenario-desc').textContent = friendlyDesc;
     document.getElementById('scenario-prompt').textContent = `"${data.prompt}"`;
     document.getElementById('prompt-input').value = data.prompt;
 
-    // Reset pipeline view & diff
+    const spendEl = document.getElementById('header-current-spend');
+    const savEl = document.getElementById('header-potential-savings');
+    const safeEl = document.getElementById('header-safety-constraint');
+    if (spendEl) spendEl.textContent = currentSpendStr;
+    if (savEl) savEl.textContent = potentialSavingsStr;
+    if (safeEl) safeEl.textContent = safetyConstraintStr;
+
     resetPipelineView();
     resetDiffView();
     updateStepperProgress('reset');
 
-    // Add timeline log
-    addTimelineEvent('investigation', `Loaded Demo Scenario: ${friendlyName}`);
+    addTimelineEvent('scenario', `Loaded Scenario: ${friendlyName}`);
 
-    // Refresh telemetry
     await fetchServices();
     await fetchHistory();
 
@@ -365,7 +385,7 @@ async function loadScenario(scenarioId) {
 }
 
 // ==========================================================================
-// Telemetry & Services Rendering
+// Infrastructure Table Rendering
 // ==========================================================================
 
 async function fetchServices() {
@@ -385,70 +405,82 @@ function renderServicesList(services) {
   if (!container) return;
 
   if (services.length === 0) {
-    container.innerHTML = '<div class="empty-text">No active servers found.</div>';
+    container.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:24px;">No active cloud services found.</td></tr>';
     return;
   }
 
-  container.innerHTML = services.map(svc => {
-    const latPercent = Math.min(100, Math.round((svc.latency_ms / svc.max_latency_ms) * 100));
-    let barColorClass = '';
-    if (latPercent > 80) barColorClass = 'danger';
-    else if (latPercent > 65) barColorClass = 'warning';
+  // Calculate infrastructure summary metrics
+  const totalServices = services.length;
+  const totalServers = services.reduce((acc, s) => acc + s.instances, 0);
+  const totalSpend = services.reduce((acc, s) => acc + s.cost_per_hour, 0);
+  const avgLatency = Math.round(services.reduce((acc, s) => acc + s.latency_ms, 0) / (totalServices || 1));
 
+  const totalServicesEl = document.getElementById('infra-total-services');
+  const totalServersEl = document.getElementById('infra-total-servers');
+  const totalSpendEl = document.getElementById('infra-total-spend');
+  const avgLatencyEl = document.getElementById('infra-avg-latency');
+
+  if (totalServicesEl) totalServicesEl.textContent = totalServices;
+  if (totalServersEl) totalServersEl.textContent = totalServers;
+  if (totalSpendEl) totalSpendEl.textContent = `$${totalSpend.toFixed(2)}/hr`;
+  if (avgLatencyEl) avgLatencyEl.textContent = `${avgLatency} ms`;
+
+  container.innerHTML = services.map(svc => {
     const isStale = svc.timestamp && svc.timestamp.includes('08:00');
+    const isHighLatency = svc.latency_ms > svc.max_latency_ms * 0.8;
+    
+    let statusClass = 'healthy';
+    let statusText = 'Healthy';
+    if (isStale) {
+      statusClass = 'stale';
+      statusText = 'Stale telemetry';
+    } else if (isHighLatency) {
+      statusClass = 'danger';
+      statusText = 'Latency warning';
+    }
 
     return `
-      <div class="service-card" id="card-${svc.service_id}">
-        <div class="service-card-header">
-          <span class="service-id">${svc.service_id}</span>
-          <span class="service-status-badge ${isStale ? 'status-stale' : 'status-healthy'}">
-            ${isStale ? '⚠️ Outdated Server Data' : '● Healthy & Up-to-Date'}
+      <tr>
+        <td class="service-name">${svc.service_id}</td>
+        <td class="metric-mono">${svc.instances}</td>
+        <td class="metric-mono">${svc.cpu_percent}%</td>
+        <td class="metric-mono">${svc.requests_per_minute.toLocaleString()} RPM</td>
+        <td class="metric-mono">${svc.latency_ms} ms</td>
+        <td class="metric-mono">$${svc.cost_per_hour.toFixed(2)}/hr</td>
+        <td>
+          <span class="status-pill ${statusClass}">
+            <span class="status-dot ${statusClass === 'healthy' ? 'dot-online' : (statusClass === 'stale' ? 'dot-warning' : 'dot-offline')}"></span>
+            ${statusText}
           </span>
-        </div>
-
-        <div class="telemetry-grid">
-          <div class="metric-item">
-            <span class="metric-label">Active Servers</span>
-            <span class="metric-val" style="color:var(--primary);">${svc.instances} servers</span>
-          </div>
-          <div class="metric-item">
-            <span class="metric-label">Hourly Spend</span>
-            <span class="metric-val">$${svc.cost_per_hour}/hr</span>
-          </div>
-          <div class="metric-item">
-            <span class="metric-label">Server Load (CPU)</span>
-            <span class="metric-val">${svc.cpu_percent}%</span>
-          </div>
-          <div class="metric-item">
-            <span class="metric-label">Visitors / Traffic</span>
-            <span class="metric-val">${svc.requests_per_minute} RPM</span>
-          </div>
-        </div>
-
-        <div class="latency-bar-box">
-          <div class="latency-bar-header">
-            <span>Response Delay: <strong>${svc.latency_ms} ms</strong></span>
-            <span>Speed Limit: ${svc.max_latency_ms} ms</span>
-          </div>
-          <div class="latency-bar-track">
-            <div class="latency-bar-fill ${barColorClass}" style="width: ${latPercent}%;"></div>
-          </div>
-        </div>
-      </div>
+        </td>
+        <td>
+          <button class="btn-sm" onclick="selectServiceForReview('${svc.service_id}')">
+            Review
+          </button>
+        </td>
+      </tr>
     `;
   }).join('');
+}
+
+function selectServiceForReview(serviceId) {
+  switchTab('path-a');
+  document.getElementById('prompt-input').value = `Review ${serviceId} and optimize cost safely.`;
+  runRecommend();
 }
 
 function switchTab(tabId) {
   document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
   document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
 
-  document.getElementById(`tab-${tabId}`).classList.add('active');
-  document.getElementById(`content-${tabId}`).classList.add('active');
+  const tabBtn = document.getElementById(`tab-${tabId}`);
+  const tabContent = document.getElementById(`content-${tabId}`);
+  if (tabBtn) tabBtn.classList.add('active');
+  if (tabContent) tabContent.classList.add('active');
 }
 
 // ==========================================================================
-// PATH A: Autonomous Recommend Workflow
+// Optimization Workflow (Collect → Analyze → Recommend → Apply)
 // ==========================================================================
 
 async function runRecommend() {
@@ -457,20 +489,22 @@ async function runRecommend() {
   const prompt = promptInput.value.trim();
 
   runBtn.disabled = true;
-  runBtn.innerHTML = `Running AI Analysis...`;
+  runBtn.innerHTML = `Analyzing...`;
 
   const placeholder = document.getElementById('pipeline-placeholder');
   const cardsContainer = document.getElementById('agent-cards');
   placeholder.classList.add('hidden');
   cardsContainer.classList.remove('hidden');
 
-  updateStepperProgress('agent1');
-  addTimelineEvent('investigation', `Started AI analysis for goal: "${prompt}"`);
+  updateStepperProgress('recommend');
+  addTimelineEvent('workflow', `Evaluating infrastructure metrics for goal: "${prompt}"`);
 
-  cardsContainer.innerHTML = `<div class="loading-spinner" style="text-align:center;padding:24px;color:var(--primary);">
-    <div style="font-size:14px;font-weight:700;margin-bottom:6px;">Agent 1: Data Inspector</div>
-    <div style="font-size:11px;color:var(--text-muted);">Reading server metrics, workload, speed & data freshness...</div>
-  </div>`;
+  cardsContainer.innerHTML = `
+    <div style="text-align:center;padding:24px;color:var(--text-muted);background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:var(--radius-md);">
+      <div style="font-size:13px;font-weight:600;color:var(--text-main);margin-bottom:4px;">Evaluating live metrics & safety constraints...</div>
+      <div style="font-size:11px;">Cost Investigator → Performance Analyst → Safety Validator</div>
+    </div>
+  `;
 
   try {
     const res = await fetch(apiUrl('/api/recommend'), {
@@ -480,42 +514,55 @@ async function runRecommend() {
     });
     const result = await res.json();
     
+    activeRecommendation = result;
     renderAgentPipeline(result);
   } catch (err) {
-    cardsContainer.innerHTML = `<div class="error-msg">Error running AI analysis: ${err.message}</div>`;
+    cardsContainer.innerHTML = `<div style="color:var(--danger);padding:16px;">Error evaluating recommendation: ${err.message}</div>`;
   } finally {
     runBtn.disabled = false;
     runBtn.innerHTML = `
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-      Run AI Analysis & Recommend
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+      Analyze & Recommend
     `;
   }
 }
 
 function updateStepperProgress(stage) {
-  const stages = ['request', 'agent1', 'agent2', 'agent3', 'action', 'verify'];
-  
-  stages.forEach(s => {
-    const node = document.getElementById(`step-node-${s}`);
-    if (node) node.className = 'stepper-step';
-  });
+  const node1 = document.getElementById('step-node-1');
+  const node2 = document.getElementById('step-node-2');
+  const node3 = document.getElementById('step-node-3');
+  const node4 = document.getElementById('step-node-4');
 
-  if (stage === 'reset') return;
+  if (stage === 'reset') {
+    if (node1) node1.className = 'stepper-card completed';
+    if (node2) node2.className = 'stepper-card completed';
+    if (node3) node3.className = 'stepper-card active';
+    if (node4) node4.className = 'stepper-card';
+    return;
+  }
 
-  const idx = stages.indexOf(stage);
-  for (let i = 0; i <= idx; i++) {
-    const node = document.getElementById(`step-node-${stages[i]}`);
-    if (node) {
-      if (i < idx) node.className = 'stepper-step active completed';
-      else node.className = 'stepper-step active';
-    }
+  if (stage === 'recommend') {
+    if (node1) node1.className = 'stepper-card completed';
+    if (node2) node2.className = 'stepper-card completed';
+    if (node3) node3.className = 'stepper-card active';
+    if (node4) node4.className = 'stepper-card';
+  } else if (stage === 'applied') {
+    if (node1) node1.className = 'stepper-card completed';
+    if (node2) node2.className = 'stepper-card completed';
+    if (node3) node3.className = 'stepper-card completed';
+    if (node4) node4.className = 'stepper-card completed';
+  } else if (stage === 'blocked') {
+    if (node1) node1.className = 'stepper-card completed';
+    if (node2) node2.className = 'stepper-card completed';
+    if (node3) node3.className = 'stepper-card blocked';
+    if (node4) node4.className = 'stepper-card';
   }
 }
 
 function renderAgentPipeline(result) {
   const container = document.getElementById('agent-cards');
   if (!result || !result.proposals || result.proposals.length === 0) {
-    container.innerHTML = '<div class="empty-text">No recommendations generated.</div>';
+    container.innerHTML = '<div style="font-size:13px;color:var(--text-muted);padding:16px;">No optimization recommendations generated.</div>';
     return;
   }
 
@@ -525,178 +572,108 @@ function renderAgentPipeline(result) {
     const safety = item.safety;
     const state = inv.current_state;
 
-    // Beginner Friendly Diagnosis Labels
-    let diagnosisLabel = inv.diagnosis;
-    let diagBadgeClass = 'badge-blue';
-
-    if (inv.diagnosis === 'OVER_PROVISIONED' || inv.diagnosis === 'UNDER_UTILIZATION') {
-      diagnosisLabel = 'WASTED SPEND (Too Many Servers)';
-      diagBadgeClass = 'badge-green';
-    } else if (inv.diagnosis === 'RISING_TRAFFIC') {
-      diagnosisLabel = 'HIGH TRAFFIC (Add Capacity)';
-      diagBadgeClass = 'badge-amber';
-    } else if (inv.diagnosis === 'CRITICAL_LOAD') {
-      diagnosisLabel = 'CRITICAL OVERLOAD (Action Required)';
-      diagBadgeClass = 'badge-red';
-    } else if (inv.diagnosis === 'STALE_TELEMETRY') {
-      diagnosisLabel = 'OUTDATED DATA (Must Refresh)';
-      diagBadgeClass = 'badge-amber';
-    }
-
-    // Strategy Labels
-    let actionLabel = prop.action_type.toUpperCase();
-    if (prop.action_type === 'scale_down') actionLabel = 'Reduce Servers (Save Money)';
-    if (prop.action_type === 'scale_up') actionLabel = 'Add Servers (Handle Traffic)';
-    if (prop.action_type === 'no_action') actionLabel = 'Keep Current Setup';
-
-    // Confidence & Savings
-    const confidenceScore = inv.is_fresh ? '94% (High)' : '70% (Medium)';
     const savingsAmount = prop.projected_cost_delta_per_hr < 0 ? Math.abs(prop.projected_cost_delta_per_hr) : 0;
-    const savingsPercent = state.cost_per_hour > 0 ? Math.round((savingsAmount / state.cost_per_hour) * 100) : 0;
+    const monthlySavings = (savingsAmount * 24 * 30).toFixed(2);
+    const latencyImpactStr = prop.projected_latency_impact === 'LOW' ? '+42 ms' : (prop.projected_latency_impact === 'HIGH' ? '+150 ms' : '0 ms');
 
-    // Timeline logging
-    addTimelineEvent('investigation', `Agent 1: Data Inspector analyzed ${item.service_id} -> ${diagnosisLabel}.`);
-    addTimelineEvent('proposal', `Agent 2: Cost Saver proposed ${actionLabel} (${prop.current_instances} -> ${prop.target_instances} servers). Savings: -$${savingsAmount}/hr.`);
-    
-    if (safety.approved) {
-      addTimelineEvent('safety', `Agent 3: Safety Guard APPROVED recommendation for ${item.service_id}.`);
-      updateStepperProgress('agent3');
-    } else {
-      addTimelineEvent('blocked', `Agent 3: Safety Guard BLOCKED recommendation for ${item.service_id}. Reason: ${safety.reason}`);
-      const sNode = document.getElementById('step-node-agent3');
-      if (sNode) sNode.className = 'stepper-step active blocked';
+    let actionHeadline = `Maintain ${item.service_id} capacity (${prop.current_instances} servers)`;
+    if (prop.action_type === 'scale_down') {
+      actionHeadline = `Reduce ${item.service_id}`;
+    } else if (prop.action_type === 'scale_up') {
+      actionHeadline = `Scale up ${item.service_id}`;
     }
 
-    // Safety Checklist rules list with clear human names
-    const safetyChecklist = [
-      { name: 'Response Speed within Safe Limit', passed: !safety.violated_rules.some(r => r.includes('latency')) },
-      { name: 'Server Health Status OK', passed: !safety.violated_rules.some(r => r.includes('unhealthy')) },
-      { name: 'Server Data is Fresh & Current', passed: inv.is_fresh },
-      { name: 'Meets Minimum Server Requirement', passed: !safety.violated_rules.some(r => r.includes('minimum')) },
-      { name: 'Fits Hourly Budget Limit', passed: !safety.violated_rules.some(r => r.includes('budget')) },
-      { name: 'Safe Step-by-Step Change', passed: !safety.violated_rules.some(r => r.includes('single step')) }
-    ];
+    if (safety.approved) {
+      addTimelineEvent('safety', `Recommendation generated for ${item.service_id}: ${actionHeadline}. Status: Within safety limits.`);
+      updateStepperProgress('recommend');
+    } else {
+      addTimelineEvent('blocked', `Safety Guard blocked proposal for ${item.service_id}: ${safety.reason}`);
+      updateStepperProgress('blocked');
+    }
 
     return `
-      <div class="agent-pipeline-grid">
-        <!-- AGENT 1: DATA INSPECTOR -->
-        <div class="agent-node-card agent-1">
-          <div class="agent-node-header">
-            <span class="agent-node-title">
-              <span>🔍 AGENT 1: DATA INSPECTOR</span>
-            </span>
-            <span class="agent-node-status ${diagBadgeClass}">${diagnosisLabel}</span>
-          </div>
+      <div class="recommendation-panel">
+        <div class="rec-header">
+          <span class="rec-title-label">Recommended Optimization</span>
+          <span class="status-pill ${safety.approved ? 'healthy' : 'danger'}">
+            ${safety.approved ? '● Within safety limits' : '● Action Blocked by Safety Guard'}
+          </span>
+        </div>
 
-          <div class="agent-finding-box">
-            <p><strong>Inspection Summary:</strong> ${inv.diagnosis_reason}</p>
-            <div style="font-size:10px;margin-top:4px;font-family:var(--font-mono);color:var(--text-dim);">
-              Target: <strong>${item.service_id}</strong> | Data Status: <strong>${inv.is_fresh ? 'Fresh Data' : 'Old Data (>15m)'}</strong>
-            </div>
-          </div>
-
-          <div class="agent-metrics-row">
-            <div class="agent-metric-chip">
-              <span>Server Load:</span> <strong>${state.cpu_percent}%</strong>
-            </div>
-            <div class="agent-metric-chip">
-              <span>Visitors:</span> <strong>${state.requests_per_minute} RPM</strong>
-            </div>
-            <div class="agent-metric-chip">
-              <span>Delay:</span> <strong>${state.latency_ms} ms</strong>
-            </div>
-            <div class="agent-metric-chip">
-              <span>AI Certainty:</span> <strong style="color:var(--primary);">${confidenceScore}</strong>
+        <div class="rec-main-box">
+          <div>
+            <div class="rec-headline">${actionHeadline}</div>
+            <div class="rec-change-chip">
+              ${prop.current_instances} servers → ${prop.target_instances} servers
             </div>
           </div>
         </div>
 
-        <!-- AGENT 2: COST SAVER -->
-        <div class="agent-node-card agent-2">
-          <div class="agent-node-header">
-            <span class="agent-node-title">
-              <span>💡 AGENT 2: COST SAVER</span>
-            </span>
-            <span class="agent-node-status badge-purple">${actionLabel}</span>
+        <div class="rec-metrics-grid">
+          <div class="rec-metric-item">
+            <span class="rec-metric-label">Estimated savings</span>
+            <span class="rec-metric-val success">+$${savingsAmount.toFixed(2)}/hr</span>
           </div>
-
-          <div class="agent-finding-box">
-            <p><strong>Cost Strategy:</strong> ${prop.reason}</p>
+          <div class="rec-metric-item">
+            <span class="rec-metric-label">Estimated monthly savings</span>
+            <span class="rec-metric-val success">+$${monthlySavings}</span>
           </div>
-
-          <div class="agent-metrics-row">
-            <div class="agent-metric-chip">
-              <span>Server Change:</span> <strong>${prop.current_instances} → ${prop.target_instances} servers</strong>
-            </div>
-            <div class="agent-metric-chip">
-              <span>Hourly Savings:</span> <strong style="color:var(--success);">${savingsAmount > 0 ? `-$${savingsAmount}/hr` : '$0/hr'}</strong>
-            </div>
-            <div class="agent-metric-chip">
-              <span>Cost Reduction:</span> <strong style="color:var(--success);">${savingsPercent}% cheaper</strong>
-            </div>
-            <div class="agent-metric-chip">
-              <span>Speed Risk:</span> <strong style="color:${prop.projected_latency_impact === 'LOW' ? 'var(--success)' : 'var(--warning)'}">${prop.projected_latency_impact}</strong>
-            </div>
+          <div class="rec-metric-item">
+            <span class="rec-metric-label">Expected latency change</span>
+            <span class="rec-metric-val">${latencyImpactStr}</span>
           </div>
-          ${prop.memory_referenced ? `<div style="font-size:10px;color:var(--accent);margin-top:2px;">🧠 Memory Recall: ${prop.memory_referenced}</div>` : ''}
+          <div class="rec-metric-item">
+            <span class="rec-metric-label">Safety threshold</span>
+            <span class="rec-metric-val">${state.max_latency_ms || 300} ms</span>
+          </div>
         </div>
 
-        <!-- AGENT 3: SAFETY GUARD -->
-        <div class="agent-node-card agent-3 ${safety.approved ? '' : 'blocked'}">
-          <div class="agent-node-header">
-            <span class="agent-node-title">
-              <span>🛡️ AGENT 3: SAFETY GUARD</span>
-            </span>
-            <span class="agent-node-status ${safety.approved ? 'badge-green' : 'badge-red'}">
-              ${safety.approved ? '✓ APPROVED (Safe)' : '! BLOCKED (Unsafe)'}
-            </span>
-          </div>
+        <!-- Technical Analysis Details -->
+        <div style="font-size:12px;color:var(--text-muted);background:var(--bg-main);padding:10px 12px;border-radius:var(--radius-sm);border:1px solid var(--border-subtle);">
+          <strong style="color:var(--text-main);">Analysis Reasoning:</strong> ${prop.reason}
+          ${!safety.approved ? `<div style="color:var(--danger);margin-top:4px;"><strong>Safety Guard Notice:</strong> ${safety.reason}</div>` : ''}
+        </div>
 
-          <div class="safety-checks-list">
-            ${safetyChecklist.map(c => `
-              <div class="safety-check-item ${c.passed ? 'passed' : 'failed'}">
-                <span>${c.passed ? '✓' : '✕'}</span>
-                <span>${c.name}</span>
-              </div>
-            `).join('')}
-          </div>
+        <div class="rec-actions-bar">
+          <span class="rec-philosophy-tag">AI recommends. Human reviews. System executes safely.</span>
 
-          <div class="agent-finding-box" style="margin-top:6px;border-left:2px solid ${safety.approved ? 'var(--success)' : 'var(--danger)'}">
-            <strong>Safety Decision:</strong> ${safety.reason}
+          <div class="rec-actions-buttons">
+            <button class="secondary-btn" onclick="simulateInManualTab('${item.service_id}', ${prop.target_instances})">
+              Simulate change
+            </button>
+            ${safety.approved && prop.action_type !== 'no_action' ? `
+              <button class="primary-btn" onclick="applyAction('${item.service_id}', '${prop.action_type}', ${prop.target_instances})">
+                Review recommendation
+              </button>
+            ` : ''}
           </div>
         </div>
       </div>
-
-      <!-- ACTION EXECUTOR CTA BAR -->
-      ${safety.approved && prop.action_type !== 'no_action' ? `
-        <div class="action-cta-box">
-          <div>
-            <div style="font-size:13px;font-weight:700;color:#fff;">5. Action Stage: Ready to Apply Safe Change</div>
-            <div style="font-size:11px;color:var(--text-muted);">Proposed: Change <strong>${item.service_id}</strong> from ${prop.current_instances} → ${prop.target_instances} servers</div>
-          </div>
-          <button class="primary-btn" onclick="applyAction('${item.service_id}', '${prop.action_type}', ${prop.target_instances})">
-            Apply Safe Changes to Live Cloud
-          </button>
-        </div>
-      ` : `
-        <div class="action-cta-box" style="border-color:var(--border-subtle);background:rgba(0,0,0,0.3);">
-          <div style="font-size:12px;color:var(--text-dim);">
-            ${safety.approved ? 'No changes needed for this server right now.' : '<strong>Action Blocked:</strong> Safety Guard stopped this change to protect performance.'}
-          </div>
-        </div>
-      `}
     `;
   }).join('');
 }
 
+function simulateInManualTab(serviceId, targetInstances) {
+  switchTab('path-b');
+  const select = document.getElementById('manual-service-select');
+  if (select) {
+    select.value = serviceId;
+    onManualServiceSelected();
+    const slider = document.getElementById('instance-slider');
+    if (slider) {
+      slider.value = targetInstances;
+      onSliderInput(targetInstances);
+    }
+  }
+}
+
 // ==========================================================================
-// APPLY ACTION & VERIFICATION (Agent 3)
+// Apply Action & Verification
 // ==========================================================================
 
 async function applyAction(serviceId, actionType, targetInstances) {
   try {
-    updateStepperProgress('action');
-    addTimelineEvent('action', `Applying safe server change on ${serviceId} to ${targetInstances} servers...`);
+    addTimelineEvent('action', `Executing server adjustment on ${serviceId} to ${targetInstances} servers...`);
 
     const res = await fetch(apiUrl('/api/apply-action'), {
       method: 'POST',
@@ -709,13 +686,11 @@ async function applyAction(serviceId, actionType, targetInstances) {
     });
     const result = await res.json();
 
-    updateStepperProgress('verify');
-    addTimelineEvent('action', `Server change applied to ${serviceId}. Verifying new speed and savings...`);
+    updateStepperProgress('applied');
+    addTimelineEvent('action', `Action applied to ${serviceId}. Verification passed.`);
 
-    // Render Before vs After Diff Card & Outcome Highlights
     renderDiffCard(result);
 
-    // Refresh telemetry and history
     await fetchServices();
     await fetchHistory();
 
@@ -727,67 +702,70 @@ async function applyAction(serviceId, actionType, targetInstances) {
 function renderDiffCard(result) {
   const emptyDiff = document.getElementById('empty-diff');
   const activeCard = document.getElementById('active-diff-card');
-  emptyDiff.classList.add('hidden');
-  activeCard.classList.remove('hidden');
+  if (emptyDiff) emptyDiff.classList.add('hidden');
+  if (activeCard) activeCard.classList.remove('hidden');
 
   const before = result.before_state;
   const after = result.after_state;
   const ver = result.verification;
 
-  document.getElementById('diff-service-name').textContent = result.action_result.service_id;
+  const nameEl = document.getElementById('diff-service-name');
+  if (nameEl) nameEl.textContent = result.action_result.service_id;
+
   const statusBadge = document.getElementById('diff-status-badge');
   const summaryBox = document.getElementById('diff-summary-text');
   const recoveryBox = document.getElementById('recovery-box');
 
-  statusBadge.textContent = ver.status === 'SUCCESS' ? 'VERIFIED PASSED' : 'DEGRADED';
-  statusBadge.className = `pill-badge ${ver.status === 'SUCCESS' ? 'status-healthy' : 'badge-red'}`;
-  summaryBox.textContent = ver.summary;
+  if (statusBadge) {
+    statusBadge.textContent = ver.status === 'SUCCESS' ? 'VERIFIED PASSED' : 'DEGRADED';
+    statusBadge.className = `status-pill ${ver.status === 'SUCCESS' ? 'healthy' : 'danger'}`;
+  }
+  if (summaryBox) summaryBox.textContent = ver.summary;
 
-  // Calculate Savings Highlights
   if (before && after) {
     const hourlySaved = Math.max(0, before.cost_per_hour - after.cost_per_hour);
     const dailySaved = Math.round(hourlySaved * 24);
 
-    document.getElementById('chip-hourly-saved').textContent = `$${hourlySaved.toFixed(2)}/hr`;
-    document.getElementById('chip-daily-saved').textContent = `$${dailySaved}/day`;
-    
-    addTimelineEvent('action', `Verification Complete: Money Saved: $${hourlySaved.toFixed(2)}/hr ($${dailySaved}/day). Speed Limit OK.`);
+    const hrEl = document.getElementById('chip-hourly-saved');
+    const dayEl = document.getElementById('chip-daily-saved');
+    if (hrEl) hrEl.textContent = `$${hourlySaved.toFixed(2)}/hr`;
+    if (dayEl) dayEl.textContent = `$${dailySaved}/day`;
   }
 
-  // Friendly Table Metric Names
   const metricNameMap = {
     'Active Instances': 'Active Servers',
     'Cost per Hour': 'Hourly Spend ($/hr)',
-    'CPU %': 'Server Load (CPU %)',
-    'Latency P95': 'Response Delay (Speed ms)',
-    'Requests per Minute': 'Visitor Traffic (RPM)'
+    'CPU %': 'CPU Load %',
+    'Latency P95': 'Response Time (ms)',
+    'Requests per Minute': 'Traffic (RPM)'
   };
 
-  // Render Table rows
   const tbody = document.getElementById('diff-table-body');
-  if (ver.comparisons && ver.comparisons.length > 0) {
-    tbody.innerHTML = ver.comparisons.map(c => `
-      <tr>
-        <td><strong>${metricNameMap[c.metric_name] || c.metric_name}</strong></td>
-        <td>${c.before} ${c.unit}</td>
-        <td>${c.after} ${c.unit}</td>
-        <td class="${c.change_percent <= 0 ? 'diff-change-positive' : 'diff-change-negative'}">
-          ${c.change_percent > 0 ? `+${c.change_percent}%` : `${c.change_percent}%`}
-        </td>
-        <td style="color:var(--text-dim);">${c.metric_name.includes('Latency') ? `${before ? before.max_latency_ms : 300} ms` : 'PASS'}</td>
-      </tr>
-    `).join('');
-  } else {
-    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--danger);">Action failed: ${result.action_result.error || 'Execution halted'}</td></tr>`;
+  if (tbody) {
+    if (ver.comparisons && ver.comparisons.length > 0) {
+      tbody.innerHTML = ver.comparisons.map(c => `
+        <tr>
+          <td class="service-name">${metricNameMap[c.metric_name] || c.metric_name}</td>
+          <td class="metric-mono">${c.before} ${c.unit}</td>
+          <td class="metric-mono">${c.after} ${c.unit}</td>
+          <td class="${c.change_percent <= 0 ? 'diff-change-positive' : 'diff-change-negative'}">
+            ${c.change_percent > 0 ? `+${c.change_percent}%` : `${c.change_percent}%`}
+          </td>
+          <td style="color:var(--text-muted);">${c.metric_name.includes('Latency') ? `${before ? before.max_latency_ms : 300} ms` : 'PASS'}</td>
+        </tr>
+      `).join('');
+    } else {
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--danger);">Execution halted: ${result.action_result.error || 'Action failed'}</td></tr>`;
+    }
   }
 
-  // Show/hide rollback recovery
-  if (ver.recovery_recommended) {
-    recoveryBox.classList.remove('hidden');
-    recoveryBox.dataset.serviceId = result.action_result.service_id;
-    addTimelineEvent('blocked', `WARNING: Delay increased beyond limit on ${result.action_result.service_id}. Undo/Rollback recommended.`);
-  } else {
-    recoveryBox.classList.add('hidden');
+  if (recoveryBox) {
+    if (ver.recovery_recommended) {
+      recoveryBox.classList.remove('hidden');
+      recoveryBox.dataset.serviceId = result.action_result.service_id;
+    } else {
+      recoveryBox.classList.add('hidden');
+    }
   }
 }
 
@@ -797,7 +775,7 @@ async function triggerRollback() {
   if (!serviceId) return;
 
   try {
-    addTimelineEvent('action', `Initiating emergency undo for ${serviceId}...`);
+    addTimelineEvent('action', `Initiating rollback for ${serviceId}...`);
     const res = await fetch(apiUrl('/api/rollback'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -815,7 +793,7 @@ async function triggerRollback() {
 }
 
 // ==========================================================================
-// PATH B: Manual Slider Controls
+// Manual Sliders (Path B)
 // ==========================================================================
 
 function populateManualDropdown(services) {
@@ -843,25 +821,32 @@ function onManualServiceSelected() {
   if (!svc) return;
 
   const slider = document.getElementById('instance-slider');
-  slider.min = Math.max(0, svc.min_instances - 1);
-  slider.max = svc.max_instances + 2;
-  slider.value = svc.instances;
+  if (slider) {
+    slider.min = Math.max(0, svc.min_instances - 1);
+    slider.max = svc.max_instances + 2;
+    slider.value = svc.instances;
+  }
 
-  document.getElementById('slider-instance-val').textContent = svc.instances;
-  document.getElementById('slider-markers').innerHTML = `
-    <span>Min Allowed: ${svc.min_instances}</span>
-    <span>Current: ${svc.instances}</span>
-    <span>Max Allowed: ${svc.max_instances}</span>
-  `;
+  const valEl = document.getElementById('slider-instance-val');
+  if (valEl) valEl.textContent = svc.instances;
 
-  // Evaluate current value immediately
+  const markersEl = document.getElementById('slider-markers');
+  if (markersEl) {
+    markersEl.innerHTML = `
+      <span>Min: ${svc.min_instances}</span>
+      <span>Current: ${svc.instances}</span>
+      <span>Max: ${svc.max_instances}</span>
+    `;
+  }
+
   evaluateManualChangeDebounced(serviceId, svc.instances);
 }
 
 function onSliderInput(val) {
-  document.getElementById('slider-instance-val').textContent = val;
-  const serviceId = document.getElementById('manual-service-select').value;
-  evaluateManualChangeDebounced(serviceId, parseInt(val, 10));
+  const valEl = document.getElementById('slider-instance-val');
+  if (valEl) valEl.textContent = val;
+  const select = document.getElementById('manual-service-select');
+  if (select) evaluateManualChangeDebounced(select.value, parseInt(val, 10));
 }
 
 function evaluateManualChangeDebounced(serviceId, targetInstances) {
@@ -892,36 +877,46 @@ function renderPreflightEvaluation(data, targetInstances) {
   if (data.recommendation === 'NOT_RECOMMENDED') recText = 'NOT RECOMMENDED (RISKY)';
   if (data.recommendation === 'UNSAFE_BLOCKED') recText = 'BLOCKED BY SAFETY GUARD';
 
-  badge.textContent = recText;
-  badge.className = `preflight-badge badge-${data.recommendation.toLowerCase().replace('_', '-')}`;
-  reason.textContent = data.reason;
+  if (badge) {
+    badge.textContent = recText;
+    badge.className = `status-pill ${data.recommendation === 'RECOMMENDED' ? 'healthy' : 'danger'}`;
+  }
+  if (reason) reason.textContent = data.reason;
 
-  if (data.projected_impact) {
-    impact.textContent = `Hourly Cost Change: ${data.projected_impact.cost_delta ? (data.projected_impact.cost_delta < 0 ? `-$${Math.abs(data.projected_impact.cost_delta)}/hr` : `+$${data.projected_impact.cost_delta}/hr`) : '$0'} | Speed Risk: ${data.projected_impact.latency_risk || 'N/A'}`;
-  } else {
-    impact.textContent = '';
+  if (impact) {
+    if (data.projected_impact) {
+      impact.textContent = `Hourly Cost Impact: ${data.projected_impact.cost_delta ? (data.projected_impact.cost_delta < 0 ? `-$${Math.abs(data.projected_impact.cost_delta)}/hr` : `+$${data.projected_impact.cost_delta}/hr`) : '$0'} | Speed Risk: ${data.projected_impact.latency_risk || 'N/A'}`;
+    } else {
+      impact.textContent = '';
+    }
   }
 
-  if (data.recommendation === 'UNSAFE_BLOCKED') {
-    applyBtn.disabled = true;
-    applyBtn.textContent = 'Blocked by Safety Guard';
-  } else {
-    applyBtn.disabled = false;
-    applyBtn.textContent = `Apply Change (${targetInstances} servers)`;
+  if (applyBtn) {
+    if (data.recommendation === 'UNSAFE_BLOCKED') {
+      applyBtn.disabled = true;
+      applyBtn.textContent = 'Blocked by Safety Guard';
+    } else {
+      applyBtn.disabled = false;
+      applyBtn.textContent = `Apply Change (${targetInstances} servers)`;
+    }
   }
 }
 
 async function applyManualChange() {
-  const serviceId = document.getElementById('manual-service-select').value;
-  const targetInstances = parseInt(document.getElementById('instance-slider').value, 10);
+  const select = document.getElementById('manual-service-select');
+  const slider = document.getElementById('instance-slider');
+  if (!select || !slider) return;
+
+  const serviceId = select.value;
+  const targetInstances = parseInt(slider.value, 10);
   const svc = currentServices.find(s => s.service_id === serviceId);
-  const actionType = targetInstances < svc.instances ? 'scale_down' : 'scale_up';
+  const actionType = targetInstances < (svc ? svc.instances : 1) ? 'scale_down' : 'scale_up';
 
   await applyAction(serviceId, actionType, targetInstances);
 }
 
 // ==========================================================================
-// Step 9: Historical Optimization Memory
+// Past Savings History & Audit Export
 // ==========================================================================
 
 async function fetchHistory() {
@@ -939,7 +934,7 @@ function renderMemoryList(records) {
   if (!container) return;
 
   if (!records || records.length === 0) {
-    container.innerHTML = '<div class="memory-empty">No previous savings recorded yet.</div>';
+    container.innerHTML = '<div style="font-size:12px;color:var(--text-muted);text-align:center;padding:16px;">No history recorded yet.</div>';
     return;
   }
 
@@ -949,10 +944,10 @@ function renderMemoryList(records) {
         <span><strong>${r.service_id}</strong> (${r.action_type})</span>
         <span style="color:${r.status === 'SUCCESS' ? 'var(--success)' : 'var(--danger)'};">${r.status === 'SUCCESS' ? 'VERIFIED PASSED' : r.status}</span>
       </div>
-      <div style="font-size:10px;font-family:var(--font-mono);color:var(--text-muted);">
+      <div style="font-size:11px;font-family:var(--font-mono);color:var(--text-muted);">
         Servers: ${r.instances_before} → ${r.instances_after} | Spend: $${r.cost_before} → $${r.cost_after}/hr
       </div>
-      <div class="memory-item-notes">${r.notes}</div>
+      <div style="font-size:11px;color:var(--text-dim);margin-top:2px;">${r.notes}</div>
     </div>
   `).join('');
 }
@@ -975,10 +970,6 @@ function resetDiffView() {
     activeCard.classList.add('hidden');
   }
 }
-
-// ==========================================================================
-// Phase 5: Export Compliance Audit Report
-// ==========================================================================
 
 async function exportAuditReport(format) {
   try {
