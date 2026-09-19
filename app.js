@@ -350,6 +350,7 @@ async function loadScenario(scenarioId) {
     // Reset pipeline view & diff
     resetPipelineView();
     resetDiffView();
+    clearAgentLogs();
     updateStepperProgress('reset');
 
     // Add timeline log
@@ -482,72 +483,7 @@ async function runRecommend() {
     
     
     renderAgentPipeline(result);
-    
-    // UI Visualization of Existing Agent Data
-    clearAgentLogs();
-    if (result && result.proposals) {
-      result.proposals.forEach(item => {
-        const inv = item.investigation;
-        const state = inv.current_state;
-        const prop = item.proposal;
-        const safety = item.safety;
-        
-        // --- 1. Data Inspector ---
-        const input1 = `
-<div class="metric-grid">
-  <div class="metric-row"><span class="metric-name">Target</span><span class="metric-val">${item.service_id}</span></div>
-  <div class="metric-row"><span class="metric-name">CPU</span><span class="metric-val">${state.cpu_percent}%</span></div>
-  <div class="metric-row"><span class="metric-name">RPM</span><span class="metric-val">${state.requests_per_minute}</span></div>
-  <div class="metric-row"><span class="metric-name">Instances</span><span class="metric-val">${state.instances}</span></div>
-  <div class="metric-row"><span class="metric-name">Fresh Data</span><span class="metric-val">${inv.is_fresh ? 'Yes' : 'No'}</span></div>
-</div>`;
-
-        const basis1 = `Based on the provided metrics:
-<br/>• CPU utilization is ${state.cpu_percent}%
-<br/>• Request rate is ${state.requests_per_minute} RPM
-<br/>• Running instances: ${state.instances}
-<br/><br/>This indicates the current capacity utilization level of the service.`;
-
-        const output1 = `Diagnosis: <strong>${inv.diagnosis}</strong><br/><br/>Reason: ${inv.diagnosis_reason}`;
-        
-        addAgentLog('Data Inspector', 'COMPLETED', 1200, input1, basis1, output1);
-
-        // --- 2. Cost Saver ---
-        const input2 = `
-<div class="metric-grid">
-  <div class="metric-row"><span class="metric-name">Diagnosis</span><span class="metric-val">${inv.diagnosis}</span></div>
-  <div class="metric-row"><span class="metric-name">CPU</span><span class="metric-val">${state.cpu_percent}%</span></div>
-  <div class="metric-row"><span class="metric-name">RPM</span><span class="metric-val">${state.requests_per_minute}</span></div>
-  <div class="metric-row"><span class="metric-name">Current Instances</span><span class="metric-val">${state.instances}</span></div>
-</div>`;
-
-        const basis2 = `Why this result follows from the input:
-<br/>The diagnosis of ${inv.diagnosis} combined with the current load of ${state.cpu_percent}% CPU and ${state.requests_per_minute} RPM suggests an adjustment in capacity is required to optimize costs while maintaining performance.`;
-
-        const output2 = `Proposed Action: <strong>${prop.action_type.toUpperCase()}</strong>
-<br/>Target Instances: <strong>${prop.target_instances}</strong>
-<br/><br/>Strategy: ${prop.reason}`;
-
-        addAgentLog('Cost Saver', 'COMPLETED', 1800, input2, basis2, output2);
-
-        // --- 3. Safety Guard ---
-        const safetyStatus = safety.approved ? 'COMPLETED' : 'FAILED';
-        const input3 = `
-<div class="metric-grid">
-  <div class="metric-row"><span class="metric-name">Proposed Action</span><span class="metric-val">${prop.action_type.toUpperCase()}</span></div>
-  <div class="metric-row"><span class="metric-name">Target Instances</span><span class="metric-val">${prop.target_instances}</span></div>
-  <div class="metric-row"><span class="metric-name">Target</span><span class="metric-val">${item.service_id}</span></div>
-</div>`;
-
-        const basis3 = `Validation against configured safety constraints:
-<br/>The proposed change to ${prop.target_instances} instances is evaluated against latency limits, health status, and budget boundaries.`;
-
-        const output3 = `Decision: <strong>${safety.approved ? 'APPROVED' : 'BLOCKED'}</strong>
-<br/><br/>Reason: ${safety.reason}`;
-
-        addAgentLog('Safety Guard', safetyStatus, 900, input3, basis3, output3);
-      });
-    }
+    renderAgentLogs(result);
 
   } catch (err) {
     cardsContainer.innerHTML = `<div class="error-msg">Error running AI analysis: ${err.message}</div>`;
@@ -657,8 +593,8 @@ function renderAgentPipeline(result) {
           </div>
 
           <div class="agent-finding-box">
-            <p><strong>Inspection Summary:</strong> ${inv.diagnosis_reason}</p>
-            <div style="font-size:10px;margin-top:4px;font-family:var(--font-mono);color:var(--text-dim);">
+            <p class="agent-summary-text"><strong>Inspection Summary:</strong> ${inv.diagnosis_reason}</p>
+            <div class="agent-meta-text">
               Target: <strong>${item.service_id}</strong> | Data Status: <strong>${inv.is_fresh ? 'Fresh Data' : 'Old Data (>15m)'}</strong>
             </div>
           </div>
@@ -689,7 +625,7 @@ function renderAgentPipeline(result) {
           </div>
 
           <div class="agent-finding-box">
-            <p><strong>Cost Strategy:</strong> ${prop.reason}</p>
+            <p class="agent-summary-text"><strong>Cost Strategy:</strong> ${prop.reason}</p>
           </div>
 
           <div class="agent-metrics-row">
@@ -706,7 +642,7 @@ function renderAgentPipeline(result) {
               <span>Speed Risk:</span> <strong style="color:${prop.projected_latency_impact === 'LOW' ? 'var(--success)' : 'var(--warning)'}">${prop.projected_latency_impact}</strong>
             </div>
           </div>
-          ${prop.memory_referenced ? `<div style="font-size:10px;color:var(--accent);margin-top:2px;">🧠 Memory Recall: ${prop.memory_referenced}</div>` : ''}
+          ${prop.memory_referenced ? `<div class="agent-memory-text">🧠 Memory Recall: ${prop.memory_referenced}</div>` : ''}
         </div>
 
         <!-- AGENT 3: SAFETY GUARD -->
@@ -723,14 +659,14 @@ function renderAgentPipeline(result) {
           <div class="safety-checks-list">
             ${safetyChecklist.map(c => `
               <div class="safety-check-item ${c.passed ? 'passed' : 'failed'}">
-                <span>${c.passed ? '✓' : '✕'}</span>
-                <span>${c.name}</span>
+                <span class="check-icon">${c.passed ? '✓' : '✕'}</span>
+                <span class="check-label">${c.name}</span>
               </div>
             `).join('')}
           </div>
 
-          <div class="agent-finding-box" style="margin-top:6px;border-left:2px solid ${safety.approved ? 'var(--success)' : 'var(--danger)'}">
-            <strong>Safety Decision:</strong> ${safety.reason}
+          <div class="safety-decision-box" style="margin-top:6px;border-left:3px solid ${safety.approved ? 'var(--success)' : 'var(--danger)'}">
+            <p class="agent-summary-text"><strong>Safety Decision:</strong> ${safety.reason}</p>
           </div>
         </div>
       </div>
@@ -739,16 +675,16 @@ function renderAgentPipeline(result) {
       ${safety.approved && prop.action_type !== 'no_action' ? `
         <div class="action-cta-box">
           <div>
-            <div style="font-size:13px;font-weight:700;color:#fff;">5. Action Stage: Ready to Apply Safe Change</div>
-            <div style="font-size:11px;color:var(--text-muted);">Proposed: Change <strong>${item.service_id}</strong> from ${prop.current_instances} → ${prop.target_instances} servers</div>
+            <div class="action-stage-title">5. Action Stage: Ready to Apply Safe Change</div>
+            <div class="action-stage-proposed">Proposed: Change <strong>${item.service_id}</strong> from ${prop.current_instances} → ${prop.target_instances} servers</div>
           </div>
           <button class="primary-btn" onclick="applyAction('${item.service_id}', '${prop.action_type}', ${prop.target_instances})">
             Apply Safe Changes to Live Cloud
           </button>
         </div>
       ` : `
-        <div class="action-cta-box" style="border-color:var(--border-subtle);background:rgba(0,0,0,0.3);">
-          <div style="font-size:12px;color:var(--text-dim);">
+        <div class="action-cta-box status-msg-box">
+          <div class="action-status-msg ${safety.approved ? 'msg-info' : 'msg-blocked'}">
             ${safety.approved ? 'No changes needed for this server right now.' : '<strong>Action Blocked:</strong> Safety Guard stopped this change to protect performance.'}
           </div>
         </div>
@@ -781,26 +717,7 @@ async function applyAction(serviceId, actionType, targetInstances) {
     addTimelineEvent('action', `Server change applied to ${serviceId}. Verifying new speed and savings...`);
 
     // Render Before vs After Diff Card & Outcome Highlights
-    
     renderDiffCard(result);
-    
-    const input4 = `
-<div class="metric-grid">
-  <div class="metric-row"><span class="metric-name">Approved Action</span><span class="metric-val">${actionType.toUpperCase()}</span></div>
-  <div class="metric-row"><span class="metric-name">Target</span><span class="metric-val">${serviceId}</span></div>
-  <div class="metric-row"><span class="metric-name">Target Capacity</span><span class="metric-val">${targetInstances}</span></div>
-</div>`;
-
-    const basis4 = `Execution Status:
-<br/>• Received approved action for ${serviceId}
-<br/>• Sent command to cloud provider API
-<br/>• Checked metrics for successful capacity adjustment`;
-
-    const output4 = `Result: <strong>${result.verification.status}</strong>
-<br/>Message: ${result.verification.summary}`;
-
-    addAgentLog('Action Executor', result.verification.status === 'SUCCESS' ? 'COMPLETED' : 'FAILED', 2400, input4, basis4, output4);
-
 
     // Refresh telemetry and history
     await fetchServices();
@@ -1106,7 +1023,7 @@ async function exportAuditReport(format) {
 
 
 // ==========================================================================
-// Agent Logs & Execution Overview
+// Agent Logs & Execution Overview (3 Autonomous Agents)
 // ==========================================================================
 
 let totalAgents = 0;
@@ -1134,7 +1051,89 @@ function clearAgentLogs() {
   totalTimeMs = 0;
   updateOverview();
   const container = document.getElementById('agent-logs-container');
-  if(container) container.innerHTML = '';
+  if(container) {
+    container.innerHTML = '<div class="timeline-empty" style="text-align:center;padding:20px;color:var(--text-dim);">No agent executions recorded yet. Run an analysis.</div>';
+  }
+}
+
+function renderAgentLogs(result) {
+  clearAgentLogs();
+  if (!result || !result.proposals || result.proposals.length === 0) return;
+
+  const proposals = result.proposals;
+
+  // --- 1. Agent 1: Data Inspector ---
+  const input1 = proposals.map(item => {
+    const s = item.investigation.current_state;
+    const inv = item.investigation;
+    return `
+      <div class="metric-grid" style="margin-bottom:8px;">
+        <div class="metric-row"><span class="metric-name">Service</span><span class="metric-val">${item.service_id}</span></div>
+        <div class="metric-row"><span class="metric-name">CPU Load</span><span class="metric-val">${s.cpu_percent}%</span></div>
+        <div class="metric-row"><span class="metric-name">Traffic</span><span class="metric-val">${s.requests_per_minute} RPM</span></div>
+        <div class="metric-row"><span class="metric-name">Latency</span><span class="metric-val">${s.latency_ms} ms</span></div>
+        <div class="metric-row"><span class="metric-name">Servers</span><span class="metric-val">${s.instances}</span></div>
+        <div class="metric-row"><span class="metric-name">Fresh Data</span><span class="metric-val">${inv.is_fresh ? 'Yes (<15m)' : 'Stale (>15m)'}</span></div>
+      </div>
+    `;
+  }).join('');
+
+  const basis1 = `Analyzed real-time telemetry metrics and resource saturation against health baselines and data freshness windows. Evaluated ${proposals.length} service(s) for operational stability.`;
+
+  const output1 = proposals.map(item => {
+    const inv = item.investigation;
+    return `<strong>${item.service_id}:</strong> Diagnosis: <strong>${inv.diagnosis}</strong><br/>Reason: ${inv.diagnosis_reason}`;
+  }).join('<br/><br/>');
+
+  addAgentLog('Agent 1: Data Inspector', 'COMPLETED', 1200, input1, basis1, output1);
+
+  // --- 2. Agent 2: Cost Saver ---
+  const input2 = proposals.map(item => {
+    const inv = item.investigation;
+    const s = item.investigation.current_state;
+    return `
+      <div class="metric-grid" style="margin-bottom:8px;">
+        <div class="metric-row"><span class="metric-name">Service</span><span class="metric-val">${item.service_id}</span></div>
+        <div class="metric-row"><span class="metric-name">Diagnosis</span><span class="metric-val">${inv.diagnosis}</span></div>
+        <div class="metric-row"><span class="metric-name">Current Spend</span><span class="metric-val">$${s.cost_per_hour}/hr</span></div>
+        <div class="metric-row"><span class="metric-name">Current Servers</span><span class="metric-val">${s.instances}</span></div>
+      </div>
+    `;
+  }).join('');
+
+  const basis2 = `Calculated cost-performance trade-offs and capacity rightsizing models to eliminate over-provisioning spend while preserving required latency headroom.`;
+
+  const output2 = proposals.map(item => {
+    const prop = item.proposal;
+    const savingsAmount = prop.projected_cost_delta_per_hr < 0 ? Math.abs(prop.projected_cost_delta_per_hr) : 0;
+    return `<strong>${item.service_id}:</strong> Proposed Action: <strong>${prop.action_type.toUpperCase()}</strong> (${prop.current_instances} → ${prop.target_instances} servers)<br/>Savings: <strong>-$${savingsAmount.toFixed(2)}/hr</strong><br/>Strategy: ${prop.reason}`;
+  }).join('<br/><br/>');
+
+  addAgentLog('Agent 2: Cost Saver', 'COMPLETED', 1800, input2, basis2, output2);
+
+  // --- 3. Agent 3: Safety Guard ---
+  const allApproved = proposals.every(item => item.safety.approved);
+  const safetyStatus = allApproved ? 'COMPLETED' : 'FAILED';
+
+  const input3 = proposals.map(item => {
+    const prop = item.proposal;
+    return `
+      <div class="metric-grid" style="margin-bottom:8px;">
+        <div class="metric-row"><span class="metric-name">Target Service</span><span class="metric-val">${item.service_id}</span></div>
+        <div class="metric-row"><span class="metric-name">Proposed Action</span><span class="metric-val">${prop.action_type.toUpperCase()}</span></div>
+        <div class="metric-row"><span class="metric-name">Target Servers</span><span class="metric-val">${prop.target_instances}</span></div>
+      </div>
+    `;
+  }).join('');
+
+  const basis3 = `Executed deterministic safety policy validation against latency thresholds, minimum instance constraints, budget boundaries, and data freshness requirements.`;
+
+  const output3 = proposals.map(item => {
+    const s = item.safety;
+    return `<strong>${item.service_id}:</strong> Verdict: <strong>${s.approved ? '✓ APPROVED (Safe)' : '✕ BLOCKED (Unsafe)'}</strong><br/>Reason: ${s.reason}${s.violated_rules && s.violated_rules.length ? `<br/>Violated Rules: ${s.violated_rules.join(', ')}` : ''}`;
+  }).join('<br/><br/>');
+
+  addAgentLog('Agent 3: Safety Guard', safetyStatus, 900, input3, basis3, output3);
 }
 
 function addAgentLog(agentName, status, durationMs, inputHtml, basisHtml, outputHtml) {
@@ -1155,11 +1154,16 @@ function addAgentLog(agentName, status, durationMs, inputHtml, basisHtml, output
   const card = document.createElement('div');
   card.className = 'agent-log-card expanded'; // Expanded by default for visibility
   
+  let icon = '🤖';
+  if (agentName.includes('Data') || agentName.includes('Inspector')) icon = '🔍';
+  else if (agentName.includes('Cost') || agentName.includes('Saver')) icon = '💡';
+  else if (agentName.includes('Safety') || agentName.includes('Guard')) icon = '🛡️';
+
   card.innerHTML = `
     <div class="agent-log-header" onclick="this.parentElement.classList.toggle('expanded')">
       <div class="agent-log-title">
-        ${agentName.includes('Data') ? '🔍' : agentName.includes('Cost') ? '💡' : agentName.includes('Safety') ? '🛡️' : '⚡'} 
-        ${agentName}
+        <span>${icon}</span>
+        <span>${agentName}</span>
       </div>
       <div class="agent-log-meta">
         <span class="pill-badge ${status === 'COMPLETED' ? 'safety-pill' : (status === 'FAILED' ? 'badge-red' : 'badge-amber')}">${status === 'COMPLETED' ? '✓ ' : ''}${status}</span>
