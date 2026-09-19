@@ -3,453 +3,368 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cloud Guardian — Cloud Cost & Safety Platform</title>
+  <title>Cloud Guardian - Smart Cloud Cost & Safety Manager</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
   <div class="app-container">
 
-    <!-- TOP NAVIGATION BAR -->
+    <!-- SECTION 1: GLOBAL HEADER -->
     <header class="top-header">
       <div class="brand-group">
         <div class="brand-icon">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/>
             <path d="m13 13 3 3 5-5"/>
           </svg>
         </div>
         <div>
-          <div class="brand-title">Cloud Guardian</div>
-          <div class="brand-subtitle">Cloud cost & safety</div>
+          <div class="brand-title">CLOUD GUARDIAN</div>
+          <div class="brand-subtitle">Smart Cloud Cost & Safety Manager (Autonomous AI Control)</div>
         </div>
       </div>
 
-      <!-- SCENARIO SELECTOR (SEGMENTED TABS) -->
+      <!-- SECTION 2: TEST SCENARIOS SWITCHER -->
       <div class="scenario-nav">
+        <span class="scenario-label">DEMO SCENARIOS:</span>
         <button class="scenario-btn active" id="btn-test-a" onclick="loadScenario('test_a')">
-          <span class="badge">A</span> Wasted capacity
+          <span class="badge">A</span> Wasted Money (Over-Provisioned)
         </button>
         <button class="scenario-btn" id="btn-test-b" onclick="loadScenario('test_b')">
-          <span class="badge">B</span> High traffic
+          <span class="badge">B</span> High Traffic (Scale Up)
         </button>
         <button class="scenario-btn" id="btn-test-c" onclick="loadScenario('test_c')">
-          <span class="badge">C</span> Stale telemetry
+          <span class="badge">C</span> Old Data (Safety Block)
         </button>
         <button class="scenario-btn" id="btn-test-d" onclick="loadScenario('test_d')">
-          <span class="badge">D</span> Risky action
+          <span class="badge">D</span> Risky Action (Safety Block)
         </button>
       </div>
 
-      <!-- STATUS & SETTINGS -->
       <div class="system-status">
-        <div class="status-badge">
-          <span class="status-dot dot-online"></span>
-          <span>Live / Production</span>
-        </div>
-        <span id="system-clock" style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);">--:--:-- UTC</span>
-        <button class="backend-btn" id="backend-status-badge" onclick="openBackendConfigModal()" title="Configure Render API Endpoint">
+        <span class="status-dot pulse"></span>
+        <span id="system-clock">--:--:-- UTC</span>
+        <button class="backend-btn" id="backend-status-badge" onclick="openBackendConfigModal()" title="Click to configure Render Backend URL">
           <span class="status-dot dot-online" id="backend-status-dot"></span>
-          <span>API: <span id="backend-status-url">Direct</span></span>
+          <span>System API: <span id="backend-status-url">Direct</span></span>
         </button>
+        <span class="pill-badge safety-pill">Safety Guard: ACTIVE</span>
       </div>
     </header>
 
-    <!-- CONTEXTUAL SCENARIO HEADER -->
-    <div class="context-header" id="scenario-banner">
-      <div class="context-header-top">
-        <div class="scenario-title-area">
-          <span class="scenario-tag">Scenario Context</span>
-          <div class="context-title" id="scenario-name">Wasted capacity</div>
-          <div class="context-desc" id="scenario-desc">6 servers are currently running for a workload that can be handled with fewer resources.</div>
-        </div>
+    <!-- Context Banner -->
+    <div class="context-banner" id="scenario-banner">
+      <div class="context-icon">⚡</div>
+      <div class="context-details">
+        <div class="context-title" id="scenario-name">Scenario A — Wasted Money (Over-Provisioned)</div>
+        <div class="context-desc" id="scenario-desc">Review current servers and reduce unnecessary spend without slowing down the website or breaking safety limits.</div>
       </div>
-
-      <!-- Compact Inline Metrics Bar -->
-      <div class="context-metrics-bar">
-        <div class="inline-metric">
-          <span class="inline-metric-label">Current spend:</span>
-          <span class="inline-metric-value" id="header-current-spend">$18.50/hr</span>
-        </div>
-        <div class="metric-divider"></div>
-        <div class="inline-metric">
-          <span class="inline-metric-label">Potential savings:</span>
-          <span class="inline-metric-value highlight" id="header-potential-savings">$9.25/hr (50%)</span>
-        </div>
-        <div class="metric-divider"></div>
-        <div class="inline-metric">
-          <span class="inline-metric-label">Safety constraint:</span>
-          <span class="inline-metric-value" id="header-safety-constraint">Max latency &lt; 300 ms</span>
-        </div>
-        <div class="metric-divider"></div>
-        <div class="inline-metric" style="flex:1;justify-content:flex-end;">
-          <span class="inline-metric-label">Target Prompt:</span>
-          <span style="color:var(--text-muted);font-style:italic;" id="scenario-prompt">"Review services and reduce cost safely"</span>
-        </div>
+      <div class="context-prompt-box">
+        <span class="prompt-label">AI GOAL:</span>
+        <span class="prompt-text" id="scenario-prompt">"Review the current services and reduce unnecessary cost without breaking the latency or availability requirements."</span>
       </div>
     </div>
 
-    <!-- INFRASTRUCTURE & METRICS SECTION -->
+    <!-- SECTION 3: DEVELOPER BOUNDARIES BAR -->
+    <div class="goals-bar">
+      <div class="goals-title">
+        <span class="goals-icon">🛡️</span>
+        <span>Safety Rules & Limits:</span>
+      </div>
+      <div class="goal-item">
+        <label for="goal-reduction">Target Savings Goal:</label>
+        <div class="goal-input-wrap">
+          <input type="number" id="goal-reduction" value="25" min="5" max="90" onchange="saveGoals()">
+          <span>% cheaper</span>
+        </div>
+      </div>
+      <div class="goal-item">
+        <label for="goal-latency">Max Allowed Speed Limit:</label>
+        <div class="goal-input-wrap">
+          <input type="number" id="goal-latency" value="300" min="50" max="2000" onchange="saveGoals()">
+          <span>ms delay</span>
+        </div>
+      </div>
+      <div class="goal-item">
+        <label for="goal-budget">Max Hourly Budget:</label>
+        <div class="goal-input-wrap">
+          <span>$</span>
+          <input type="number" id="goal-budget" value="50" min="5" max="500" onchange="saveGoals()">
+          <span>/hr</span>
+        </div>
+      </div>
+      <div class="goal-item">
+        <label for="goal-min-instances">Minimum Servers Required:</label>
+        <div class="goal-input-wrap">
+          <input type="number" id="goal-min-instances" value="1" min="1" max="10" onchange="saveGoals()">
+          <span>servers</span>
+        </div>
+      </div>
+      <div class="goal-item toggle-item">
+        <label>Auto System Monitoring:</label>
+        <button class="toggle-btn active" id="btn-monitoring-toggle" onclick="toggleMonitoring()">
+          <span class="toggle-dot"></span> ON
+        </button>
+      </div>
+    </div>
+
+    <!-- SECTION 4: CLOUD SERVICE MONITORING & TELEMETRY GRID -->
     <section class="section-container">
       <div class="section-header">
         <div class="section-title">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="8" x="2" y="2" rx="2" ry="2"/><rect width="20" height="8" x="2" y="14" rx="2" ry="2"/><line x1="6" x2="6.01" y1="6" y2="6"/><line x1="6" x2="6.01" y1="18" y2="18"/></svg>
-          Infrastructure
+          1. Active Cloud Services & Live Server Health
         </div>
-        <button class="btn-sm" onclick="fetchServices()" title="Refresh live servers">
-          Refresh metrics
+        <button class="icon-btn" onclick="fetchServices()" title="Refresh live server data">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 21h5v-5"/></svg>
         </button>
       </div>
 
-      <!-- Overview Stats Bar -->
-      <div class="infra-overview-bar">
-        <div class="infra-stat">
-          <span class="infra-stat-label">Services</span>
-          <span class="infra-stat-val" id="infra-total-services">2</span>
-        </div>
-        <div class="metric-divider" style="height:24px;"></div>
-        <div class="infra-stat">
-          <span class="infra-stat-label">Total Servers</span>
-          <span class="infra-stat-val" id="infra-total-servers">7</span>
-        </div>
-        <div class="metric-divider" style="height:24px;"></div>
-        <div class="infra-stat">
-          <span class="infra-stat-label">Hourly Spend</span>
-          <span class="infra-stat-val" id="infra-total-spend">$21.25/hr</span>
-        </div>
-        <div class="metric-divider" style="height:24px;"></div>
-        <div class="infra-stat">
-          <span class="infra-stat-label">Avg Response Time</span>
-          <span class="infra-stat-val" id="infra-avg-latency">106 ms</span>
-        </div>
-      </div>
-
-      <!-- Infrastructure Table & Chart Layout -->
-      <div class="infra-grid-layout">
-        <!-- Service Table -->
-        <div class="data-table-container">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>Service</th>
-                <th>Servers</th>
-                <th>CPU</th>
-                <th>Traffic</th>
-                <th>Response Time</th>
-                <th>Hourly Cost</th>
-                <th>Status</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody id="services-list">
-              <tr>
-                <td colspan="8" style="text-align:center;color:var(--text-muted);padding:24px;">
-                  Reading infrastructure telemetry...
-                </td>
-              </tr>
-            </tbody>
-          </table>
+      <div class="services-telemetry-grid">
+        <div class="services-cards-list" id="services-list">
+          <div class="loading-spinner">Reading live server metrics...</div>
         </div>
 
-        <!-- Latency & Safety Threshold Visualization -->
-        <div class="chart-card">
-          <div class="chart-card-header">
-            <span style="font-weight:600;color:var(--text-main);">Response Time vs Safety Threshold</span>
+        <div class="chart-box">
+          <div class="chart-header">
+            <span>Website Speed vs Allowed Safety Limit</span>
+            <span class="chart-live-badge">● Live Metrics</span>
           </div>
-          <div class="chart-metrics-info">
-            <span>Current: <strong id="chart-current-latency" style="color:var(--text-main);font-family:var(--font-mono);">167 ms</strong></span>
-            <span>Safety Limit: <strong id="chart-safety-limit" style="color:var(--danger);font-family:var(--font-mono);">300 ms</strong></span>
-          </div>
-          <div class="chart-container-inner">
+          <div class="chart-canvas-container">
             <canvas id="telemetryChart"></canvas>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- OPTIMIZATION WORKFLOW SECTION -->
-    <section class="section-container">
+    <!-- SECTION 5: AUTONOMOUS OPTIMIZATION PIPELINE -->
+    <section class="section-container pipeline-section">
       <div class="section-header">
         <div class="section-title">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-          Optimization workflow
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          2. Autonomous 3-Agent Action Pipeline
         </div>
-        <div class="workflow-tabs">
+        <div class="tab-header-inline">
           <button class="tab-btn active" id="tab-path-a" onclick="switchTab('path-a')">
-            Automated Recommendation
+            <span>🤖</span> Automatic AI Pipeline (Recommended)
           </button>
           <button class="tab-btn" id="tab-path-b" onclick="switchTab('path-b')">
-            Manual What-If Simulation
+            <span>🎛️</span> Manual What-If Testing (Sliders)
           </button>
         </div>
       </div>
 
-      <!-- TAB CONTENT: PATH A (Automated Pipeline) -->
+      <!-- TAB CONTENT: PATH A (Autonomous Pipeline) -->
       <div class="tab-content active" id="content-path-a">
-        <!-- Prompt Input Bar -->
-        <div class="workflow-input-row">
-          <label for="prompt-input">Goal:</label>
-          <input type="text" id="prompt-input" class="text-input" value="Review the current services and reduce unnecessary cost without breaking the latency or availability requirements.">
-          <button class="primary-btn" id="btn-run-recommend" onclick="runRecommend()">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-            Analyze & Recommend
-          </button>
-        </div>
-
-        <!-- 4-Step Progression Stepper -->
-        <div class="workflow-stepper">
-          <div class="stepper-card completed" id="step-node-1">
-            <div class="stepper-card-top">
-              <span class="stepper-step-title">✓ 1. Collect</span>
-            </div>
-            <span class="stepper-desc">Infrastructure metrics collected</span>
-          </div>
-          <div class="stepper-card completed" id="step-node-2">
-            <div class="stepper-card-top">
-              <span class="stepper-step-title">✓ 2. Analyze</span>
-            </div>
-            <span class="stepper-desc">Traffic & utilization evaluated</span>
-          </div>
-          <div class="stepper-card active" id="step-node-3">
-            <div class="stepper-card-top">
-              <span class="stepper-step-title">→ 3. Recommend</span>
-            </div>
-            <span class="stepper-desc">Finding safe capacity reduction</span>
-          </div>
-          <div class="stepper-card" id="step-node-4">
-            <div class="stepper-card-top">
-              <span class="stepper-step-title">○ 4. Apply</span>
-            </div>
-            <span class="stepper-desc">Awaiting human review</span>
+        <!-- User Request Goal Input Bar -->
+        <div class="input-card">
+          <label class="input-label" for="prompt-input">Instructions for AI Agents:</label>
+          <div class="input-row">
+            <input type="text" id="prompt-input" class="text-input" value="Review the current services and reduce unnecessary cost without breaking the latency or availability requirements.">
+            <button class="primary-btn" id="btn-run-recommend" onclick="runRecommend()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              Run AI Analysis & Recommend
+            </button>
           </div>
         </div>
 
-        <!-- Supporting Technical Agents Tag Bar -->
-        <div class="agents-meta-bar">
-          <span>Analysis agents:</span>
-          <span class="agent-tag">🔍 Cost Investigator</span>
-          <span class="agent-tag">📊 Performance Analyst</span>
-          <span class="agent-tag">🛡️ Safety Validator</span>
+        <!-- Horizontal Pipeline Stepper Bar -->
+        <div class="pipeline-stepper-bar" id="pipeline-stepper">
+          <div class="stepper-step" id="step-node-request">
+            <div class="step-num">1</div>
+            <div class="step-label">1. Request</div>
+          </div>
+          <div class="stepper-line"></div>
+          <div class="stepper-step" id="step-node-agent1">
+            <div class="step-num">2</div>
+            <div class="step-label">2. Data Inspector</div>
+          </div>
+          <div class="stepper-line"></div>
+          <div class="stepper-step" id="step-node-agent2">
+            <div class="step-num">3</div>
+            <div class="step-label">3. Cost Saver</div>
+          </div>
+          <div class="stepper-line"></div>
+          <div class="stepper-step" id="step-node-agent3">
+            <div class="step-num">4</div>
+            <div class="step-label">4. Safety Guard</div>
+          </div>
+          <div class="stepper-line"></div>
+          <div class="stepper-step" id="step-node-action">
+            <div class="step-num">5</div>
+            <div class="step-label">5. Cloud Action</div>
+          </div>
+          <div class="stepper-line"></div>
+          <div class="stepper-step" id="step-node-verify">
+            <div class="step-num">6</div>
+            <div class="step-label">6. Savings Result</div>
+          </div>
         </div>
 
-        <!-- Recommendation Panel & Pipeline View -->
-        <div id="pipeline-view">
-          <div class="workflow-placeholder" id="pipeline-placeholder">
-            <div style="font-size:14px;font-weight:600;color:var(--text-main);">No active recommendation generated yet</div>
-            <div style="font-size:12px;color:var(--text-muted);">Click <strong>Analyze & Recommend</strong> above to generate safe optimization options.</div>
+        <!-- Pipeline Agent View -->
+        <div class="pipeline-view" id="pipeline-view">
+          <div class="pipeline-placeholder" id="pipeline-placeholder">
+            <div class="empty-icon">🤖</div>
+            <div class="empty-text">Click <strong>Run AI Analysis & Recommend</strong> to trigger the 3-Agent AI team (Data Inspector → Cost Saver → Safety Guard).</div>
           </div>
 
-          <div class="hidden" id="agent-cards">
-            <!-- Populated dynamically with Recommendation Panel -->
+          <div class="agent-cards-container hidden" id="agent-cards">
+            <!-- Populated dynamically with Agent 1, Agent 2, Safety Guard, and Action cards -->
           </div>
         </div>
       </div>
 
-      <!-- TAB CONTENT: PATH B (Manual What-If Sliders) -->
+      <!-- TAB CONTENT: PATH B (Manual Sliders) -->
       <div class="tab-content" id="content-path-b">
-        <div class="manual-panel">
-          <div style="font-size:13px;color:var(--text-muted);">
-            Test server count adjustments manually. Pre-flight safety checks will validate changes before applying.
+        <div class="manual-card">
+          <div class="manual-intro">
+            Manually test server changes. The <strong>Safety Guard</strong> will check if your proposed change is safe in real-time.
           </div>
 
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-            <div>
-              <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px;">Select Service:</label>
-              <select id="manual-service-select" class="select-input" onchange="onManualServiceSelected()">
-                <!-- Populated dynamically -->
-              </select>
-            </div>
+          <div class="form-group">
+            <label class="form-label" for="manual-service-select">Select Service to Test:</label>
+            <select id="manual-service-select" class="select-input" onchange="onManualServiceSelected()">
+              <!-- Populated dynamically -->
+            </select>
+          </div>
 
-            <div>
-              <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
-                <label style="font-size:12px;color:var(--text-muted);">Target Server Count:</label>
-                <span id="slider-instance-val" style="font-family:var(--font-mono);font-weight:600;">4</span>
-              </div>
-              <input type="range" id="instance-slider" class="range-slider" min="1" max="10" value="4" oninput="onSliderInput(this.value)">
-              <div class="slider-markers" id="slider-markers">
-                <span>Min: 1</span>
-                <span>Max: 8</span>
-              </div>
+          <div class="slider-box">
+            <div class="slider-header">
+              <span>Target Server Count:</span>
+              <span class="slider-value" id="slider-instance-val">4</span>
+            </div>
+            <input type="range" id="instance-slider" class="range-slider" min="1" max="10" value="4" oninput="onSliderInput(this.value)">
+            <div class="slider-markers" id="slider-markers">
+              <span>Min Allowed: 1</span>
+              <span>Max Allowed: 8</span>
             </div>
           </div>
 
-          <!-- Pre-Flight Evaluation Card -->
-          <div class="preflight-box" id="preflight-card">
-            <div style="display:flex;align-items:center;justify-content:space-between;">
-              <span style="font-weight:600;color:var(--text-main);">Pre-Flight Safety Verdict:</span>
-              <span class="status-pill healthy" id="preflight-badge">CHECKING</span>
+          <!-- Instant Pre-Flight Evaluation Box -->
+          <div class="preflight-card" id="preflight-card">
+            <div class="preflight-header">
+              <span class="preflight-title">Pre-Flight Safety Verdict:</span>
+              <span class="preflight-badge" id="preflight-badge">CHECKING</span>
             </div>
-            <div style="font-size:12px;color:var(--text-muted);" id="preflight-reason">
-              Adjust slider to test proposed server allocation.
+            <div class="preflight-reason" id="preflight-reason">
+              Move slider to test proposed server change.
             </div>
-            <div style="font-size:11px;font-family:var(--font-mono);color:var(--text-dim);" id="preflight-impact">
+            <div class="preflight-impact" id="preflight-impact">
               <!-- Impact details -->
             </div>
           </div>
 
-          <div style="display:flex;justify-content:flex-end;">
+          <div class="manual-actions">
             <button class="primary-btn" id="btn-apply-manual" onclick="applyManualChange()" disabled>
-              Apply Changes to Live Infrastructure
+              Apply Changes to Live Cloud
             </button>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- SAFETY CONTROLS SECTION -->
+    <!-- SECTION 6: VERIFICATION & FINANCIAL OUTCOME -->
     <section class="section-container">
       <div class="section-header">
         <div class="section-title">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-          Safety controls
-        </div>
-        <span style="font-size:12px;color:var(--text-muted);">Enforced during all recommendations & automated changes</span>
-      </div>
-
-      <div class="safety-grid">
-        <div class="safety-card">
-          <span class="safety-card-label">Maximum latency</span>
-          <div class="safety-input-wrap">
-            <input type="number" id="goal-latency" value="300" min="50" max="2000" onchange="saveGoals()">
-            <span>ms</span>
-          </div>
-        </div>
-
-        <div class="safety-card">
-          <span class="safety-card-label">Minimum servers</span>
-          <div class="safety-input-wrap">
-            <input type="number" id="goal-min-instances" value="1" min="1" max="10" onchange="saveGoals()">
-            <span>servers</span>
-          </div>
-        </div>
-
-        <div class="safety-card">
-          <span class="safety-card-label">Maximum hourly budget</span>
-          <div class="safety-input-wrap">
-            <span>$</span>
-            <input type="number" id="goal-budget" value="50" min="5" max="500" onchange="saveGoals()">
-            <span>/hr</span>
-          </div>
-        </div>
-
-        <div class="safety-card">
-          <span class="safety-card-label">Target savings</span>
-          <div class="safety-input-wrap">
-            <input type="number" id="goal-reduction" value="25" min="5" max="90" onchange="saveGoals()">
-            <span>%</span>
-          </div>
-        </div>
-
-        <div class="safety-card">
-          <span class="safety-card-label">Monitoring</span>
-          <div style="margin-top:4px;">
-            <button class="toggle-btn active" id="btn-monitoring-toggle" onclick="toggleMonitoring()">
-              <span class="toggle-dot"></span> Active
-            </button>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- VERIFIED RESULTS (BEFORE VS AFTER DIFF) -->
-    <section class="section-container">
-      <div class="section-header">
-        <div class="section-title">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-          Verified Results & Verification Diff
+          3. Verified Savings & Results (Before vs After)
         </div>
       </div>
 
-      <div id="diff-container">
-        <div class="workflow-placeholder" id="empty-diff">
-          <div style="font-size:13px;color:var(--text-muted);">Apply an optimization recommendation to generate Before vs After metrics.</div>
+      <div class="diff-container" id="diff-container">
+        <div class="empty-diff-state" id="empty-diff">
+          <div class="empty-icon">📊</div>
+          <div>Run an AI recommendation and apply an action to view real-time <strong>Before vs After</strong> savings and speed checks.</div>
         </div>
 
-        <div class="diff-panel hidden" id="active-diff-card">
-          <div class="diff-header">
+        <div class="diff-card hidden" id="active-diff-card">
+          <div class="diff-card-header">
             <div>
-              <span style="font-size:15px;font-weight:600;font-family:var(--font-mono);" id="diff-service-name">orders-api</span>
-              <span class="status-pill healthy" id="diff-status-badge" style="margin-left:8px;">VERIFIED PASSED</span>
+              <span class="diff-service-id" id="diff-service-name">reports-worker</span>
+              <span class="pill-badge" id="diff-status-badge">SUCCESS</span>
             </div>
-            <div style="display:flex;gap:16px;font-size:12px;">
-              <span>Hourly Savings: <strong id="chip-hourly-saved" style="color:var(--success);font-family:var(--font-mono);">$9.25/hr</strong></span>
-              <span>Daily Savings: <strong id="chip-daily-saved" style="color:var(--success);font-family:var(--font-mono);">$222/day</strong></span>
+            <div class="savings-highlights" id="savings-highlights">
+              <span class="saving-chip">Money Saved Per Hour: <strong id="chip-hourly-saved">$9.25/hr</strong></span>
+              <span class="saving-chip highlight">Estimated Daily Savings: <strong id="chip-daily-saved">$222/day</strong></span>
             </div>
           </div>
 
-          <div class="data-table-container">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>Metric</th>
-                  <th>Before</th>
-                  <th>After</th>
-                  <th>Impact</th>
-                  <th>Safety Threshold</th>
-                </tr>
-              </thead>
-              <tbody id="diff-table-body">
-                <!-- Dynamically populated -->
-              </tbody>
-            </table>
+          <table class="diff-table">
+            <thead>
+              <tr>
+                <th>Server Metric</th>
+                <th>Before Change</th>
+                <th>After Change</th>
+                <th>Total Impact</th>
+                <th>Safety Limit</th>
+              </tr>
+            </thead>
+            <tbody id="diff-table-body">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+
+          <div class="diff-summary-box" id="diff-summary-text">
+            Optimization successfully reduced hourly spend while preserving SLA and health.
           </div>
 
-          <div style="font-size:12px;color:var(--text-muted);background:var(--bg-main);padding:10px 12px;border-radius:var(--radius-sm);" id="diff-summary-text">
-            Optimization successfully executed. Latency remains safely within limit.
-          </div>
-
-          <!-- Rollback Banner -->
+          <!-- Rollback Recovery Banner -->
           <div class="recovery-box hidden" id="recovery-box">
-            <div style="font-size:12px;color:var(--warning);">
-              <strong>Latency Alert:</strong> Response time increased beyond safety limit.
+            <div class="recovery-alert">
+              <strong>⚠️ Speed Warning Detected:</strong> Server delay increased beyond allowed safety limit.
             </div>
             <button class="rollback-btn" onclick="triggerRollback()">
-              ↺ Rollback to previous configuration
+              ↺ Undo & Restore Previous Setup (Rollback)
             </button>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- ACTIVITY LOG & HISTORY -->
-    <section class="grid-two-col">
-      <!-- Activity Log -->
+    <!-- SECTION 7: AUDIT TRAIL & OPTIMIZATION MEMORY -->
+    <section class="section-container grid-two-col">
+      <!-- Left: Optimization Activity Timeline -->
       <div class="sub-panel">
         <div class="panel-header-sm">
           <span class="panel-title-sm">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-            Activity Log
+            4. Live Activity Log
           </span>
-          <span style="font-size:11px;color:var(--text-dim);">Live operation trail</span>
+          <span class="memory-sub">Step-by-step history of what happened</span>
         </div>
         <div class="audit-timeline" id="audit-timeline">
-          <div style="font-size:12px;color:var(--text-muted);text-align:center;padding:16px;">System initialized.</div>
+          <div class="timeline-empty">System ready. Waiting for scenario actions...</div>
         </div>
       </div>
 
-      <!-- Historical Optimization Memory & Export -->
+      <!-- Right: Historical Optimization Memory & Export -->
       <div class="sub-panel">
         <div class="panel-header-sm">
           <span class="panel-title-sm">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="3"/></svg>
-            Optimization Memory
+            5. Past Savings History
           </span>
-          <span style="font-size:11px;color:var(--text-dim);">Historical savings log</span>
+          <span class="memory-sub">Record of previously saved money</span>
         </div>
 
         <div class="memory-list" id="memory-list">
-          <div style="font-size:12px;color:var(--text-muted);text-align:center;padding:16px;">No history recorded yet.</div>
+          <div class="memory-empty">No previous actions recorded yet.</div>
         </div>
 
+        <!-- Export Buttons -->
         <div class="export-box">
-          <button class="secondary-btn" style="flex:1;" onclick="exportAuditReport('json')">
-            Export JSON Report
+          <button class="secondary-btn" onclick="exportAuditReport('json')" title="Download full compliance audit log">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+            Download Full Report (JSON)
           </button>
-          <button class="secondary-btn" style="flex:1;" onclick="exportAuditReport('csv')">
-            Export CSV Summary
+          <button class="secondary-btn" onclick="exportAuditReport('csv')" title="Download CSV summary">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/></svg>
+            Download Summary Table (CSV)
           </button>
         </div>
       </div>
@@ -457,20 +372,22 @@
 
   </div>
 
-  <!-- Backend Config Modal -->
+  <!-- Backend Configuration Modal -->
   <div id="backend-modal" class="modal-backdrop hidden">
     <div class="modal-content">
       <div class="modal-header">
-        <div class="modal-title">System Connection Settings</div>
+        <div class="modal-title">⚙️ System Connection Settings</div>
         <button class="modal-close-btn" onclick="closeBackendConfigModal()">&times;</button>
       </div>
-      <div>
-        <p style="font-size:12px;color:var(--text-muted);line-height:1.4;">Specify your deployed Render API endpoint URL below:</p>
+      <div class="modal-body">
+        <p>Set your deployed <strong>Render</strong> backend URL below so this web app can communicate with the server API.</p>
+        <label for="backend-url-input" style="font-weight:600;color:var(--text-main);">Render Backend API URL:</label>
         <input type="url" id="backend-url-input" class="modal-input" placeholder="https://pragyaan-agent-backend.onrender.com" />
+        <small style="color:var(--text-dim);line-height:1.4;">Leave empty to use relative paths (works locally or with Vercel rewrites).</small>
       </div>
       <div class="modal-actions">
-        <button class="btn-sm" onclick="closeBackendConfigModal()">Cancel</button>
-        <button class="primary-btn" style="padding:6px 14px;" onclick="saveBackendConfig()">Save Connection</button>
+        <button class="action-btn btn-secondary" onclick="closeBackendConfigModal()">Cancel</button>
+        <button class="action-btn" onclick="saveBackendConfig()">Save & Connect</button>
       </div>
     </div>
   </div>
