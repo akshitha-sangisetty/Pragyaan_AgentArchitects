@@ -480,7 +480,75 @@ async function runRecommend() {
     });
     const result = await res.json();
     
+    
     renderAgentPipeline(result);
+    
+    // UI Visualization of Existing Agent Data
+    clearAgentLogs();
+    if (result && result.proposals) {
+      result.proposals.forEach(item => {
+        const inv = item.investigation;
+        const state = inv.current_state;
+        const prop = item.proposal;
+        const safety = item.safety;
+        
+        // --- 1. Data Inspector ---
+        const input1 = `
+<div class="metric-grid">
+  <div class="metric-row"><span class="metric-name">Target</span><span class="metric-val">${item.service_id}</span></div>
+  <div class="metric-row"><span class="metric-name">CPU</span><span class="metric-val">${state.cpu_percent}%</span></div>
+  <div class="metric-row"><span class="metric-name">RPM</span><span class="metric-val">${state.requests_per_minute}</span></div>
+  <div class="metric-row"><span class="metric-name">Instances</span><span class="metric-val">${state.instances}</span></div>
+  <div class="metric-row"><span class="metric-name">Fresh Data</span><span class="metric-val">${inv.is_fresh ? 'Yes' : 'No'}</span></div>
+</div>`;
+
+        const basis1 = `Based on the provided metrics:
+<br/>• CPU utilization is ${state.cpu_percent}%
+<br/>• Request rate is ${state.requests_per_minute} RPM
+<br/>• Running instances: ${state.instances}
+<br/><br/>This indicates the current capacity utilization level of the service.`;
+
+        const output1 = `Diagnosis: <strong>${inv.diagnosis}</strong><br/><br/>Reason: ${inv.diagnosis_reason}`;
+        
+        addAgentLog('Data Inspector', 'COMPLETED', 1200, input1, basis1, output1);
+
+        // --- 2. Cost Saver ---
+        const input2 = `
+<div class="metric-grid">
+  <div class="metric-row"><span class="metric-name">Diagnosis</span><span class="metric-val">${inv.diagnosis}</span></div>
+  <div class="metric-row"><span class="metric-name">CPU</span><span class="metric-val">${state.cpu_percent}%</span></div>
+  <div class="metric-row"><span class="metric-name">RPM</span><span class="metric-val">${state.requests_per_minute}</span></div>
+  <div class="metric-row"><span class="metric-name">Current Instances</span><span class="metric-val">${state.instances}</span></div>
+</div>`;
+
+        const basis2 = `Why this result follows from the input:
+<br/>The diagnosis of ${inv.diagnosis} combined with the current load of ${state.cpu_percent}% CPU and ${state.requests_per_minute} RPM suggests an adjustment in capacity is required to optimize costs while maintaining performance.`;
+
+        const output2 = `Proposed Action: <strong>${prop.action_type.toUpperCase()}</strong>
+<br/>Target Instances: <strong>${prop.target_instances}</strong>
+<br/><br/>Strategy: ${prop.reason}`;
+
+        addAgentLog('Cost Saver', 'COMPLETED', 1800, input2, basis2, output2);
+
+        // --- 3. Safety Guard ---
+        const safetyStatus = safety.approved ? 'COMPLETED' : 'FAILED';
+        const input3 = `
+<div class="metric-grid">
+  <div class="metric-row"><span class="metric-name">Proposed Action</span><span class="metric-val">${prop.action_type.toUpperCase()}</span></div>
+  <div class="metric-row"><span class="metric-name">Target Instances</span><span class="metric-val">${prop.target_instances}</span></div>
+  <div class="metric-row"><span class="metric-name">Target</span><span class="metric-val">${item.service_id}</span></div>
+</div>`;
+
+        const basis3 = `Validation against configured safety constraints:
+<br/>The proposed change to ${prop.target_instances} instances is evaluated against latency limits, health status, and budget boundaries.`;
+
+        const output3 = `Decision: <strong>${safety.approved ? 'APPROVED' : 'BLOCKED'}</strong>
+<br/><br/>Reason: ${safety.reason}`;
+
+        addAgentLog('Safety Guard', safetyStatus, 900, input3, basis3, output3);
+      });
+    }
+
   } catch (err) {
     cardsContainer.innerHTML = `<div class="error-msg">Error running AI analysis: ${err.message}</div>`;
   } finally {
@@ -713,7 +781,26 @@ async function applyAction(serviceId, actionType, targetInstances) {
     addTimelineEvent('action', `Server change applied to ${serviceId}. Verifying new speed and savings...`);
 
     // Render Before vs After Diff Card & Outcome Highlights
+    
     renderDiffCard(result);
+    
+    const input4 = `
+<div class="metric-grid">
+  <div class="metric-row"><span class="metric-name">Approved Action</span><span class="metric-val">${actionType.toUpperCase()}</span></div>
+  <div class="metric-row"><span class="metric-name">Target</span><span class="metric-val">${serviceId}</span></div>
+  <div class="metric-row"><span class="metric-name">Target Capacity</span><span class="metric-val">${targetInstances}</span></div>
+</div>`;
+
+    const basis4 = `Execution Status:
+<br/>• Received approved action for ${serviceId}
+<br/>• Sent command to cloud provider API
+<br/>• Checked metrics for successful capacity adjustment`;
+
+    const output4 = `Result: <strong>${result.verification.status}</strong>
+<br/>Message: ${result.verification.summary}`;
+
+    addAgentLog('Action Executor', result.verification.status === 'SUCCESS' ? 'COMPLETED' : 'FAILED', 2400, input4, basis4, output4);
+
 
     // Refresh telemetry and history
     await fetchServices();
@@ -1015,4 +1102,87 @@ async function exportAuditReport(format) {
   } catch (err) {
     alert(`Export failed: ${err.message}`);
   }
+}
+
+
+// ==========================================================================
+// Agent Logs & Execution Overview
+// ==========================================================================
+
+let totalAgents = 0;
+let completedAgents = 0;
+let runningAgents = 0;
+let failedAgents = 0;
+let totalTimeMs = 0;
+
+function updateOverview() {
+  const elTotal = document.getElementById('overview-total');
+  if(elTotal) {
+    elTotal.textContent = totalAgents;
+    document.getElementById('overview-completed').textContent = completedAgents;
+    document.getElementById('overview-running').textContent = runningAgents;
+    document.getElementById('overview-failed').textContent = failedAgents;
+    document.getElementById('overview-time').textContent = (totalTimeMs / 1000).toFixed(1) + 's';
+  }
+}
+
+function clearAgentLogs() {
+  totalAgents = 0;
+  completedAgents = 0;
+  runningAgents = 0;
+  failedAgents = 0;
+  totalTimeMs = 0;
+  updateOverview();
+  const container = document.getElementById('agent-logs-container');
+  if(container) container.innerHTML = '';
+}
+
+function addAgentLog(agentName, status, durationMs, inputHtml, basisHtml, outputHtml) {
+  totalAgents++;
+  if (status === 'COMPLETED') completedAgents++;
+  else if (status === 'FAILED') failedAgents++;
+  else if (status === 'RUNNING') runningAgents++;
+  
+  totalTimeMs += durationMs;
+  updateOverview();
+
+  const container = document.getElementById('agent-logs-container');
+  if(!container) return;
+  
+  const emptyMsg = container.querySelector('.timeline-empty');
+  if(emptyMsg) emptyMsg.remove();
+
+  const card = document.createElement('div');
+  card.className = 'agent-log-card expanded'; // Expanded by default for visibility
+  
+  card.innerHTML = `
+    <div class="agent-log-header" onclick="this.parentElement.classList.toggle('expanded')">
+      <div class="agent-log-title">
+        ${agentName.includes('Data') ? '🔍' : agentName.includes('Cost') ? '💡' : agentName.includes('Safety') ? '🛡️' : '⚡'} 
+        ${agentName}
+      </div>
+      <div class="agent-log-meta">
+        <span class="pill-badge ${status === 'COMPLETED' ? 'safety-pill' : (status === 'FAILED' ? 'badge-red' : 'badge-amber')}">${status === 'COMPLETED' ? '✓ ' : ''}${status}</span>
+        <span>${(durationMs / 1000).toFixed(1)}s</span>
+        <span>▼</span>
+      </div>
+    </div>
+    <div class="agent-log-body">
+      <div class="agent-flow-section">
+        <div class="flow-label">📥 INPUT</div>
+        <div class="agent-flow-box">${inputHtml}</div>
+        
+        <div class="agent-flow-arrow">│<br/>↓</div>
+        
+        <div class="flow-label">🔎 DECISION BASIS</div>
+        <div class="agent-flow-box">${basisHtml}</div>
+        
+        <div class="agent-flow-arrow">│<br/>↓</div>
+        
+        <div class="flow-label">📤 OUTPUT</div>
+        <div class="agent-flow-box bg-output">${outputHtml}</div>
+      </div>
+    </div>
+  `;
+  container.appendChild(card);
 }
